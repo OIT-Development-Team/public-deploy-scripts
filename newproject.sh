@@ -19,25 +19,28 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-#Pull down github action file
+#Pull down github action files
 if [ ! -f .github/workflows/build.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/master/build.yaml --create-dirs -o .github/workflows/build.yaml
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/build.yaml --create-dirs -o .github/workflows/build.yaml
+fi
+if [ ! -f .github/workflows/call-pint.yaml ]; then
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/call-pint.yaml --create-dirs -o .github/workflows/call-pint.yaml
 fi
 
 #Pull down docker-compose.yaml file
 if [ ! -f docker-compose.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/master/docker-compose.yaml --create-dirs -o docker-compose.yaml
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/docker-compose.yaml --create-dirs -o docker-compose.yaml
 fi
 
 #Pull down deploy-plan.json file
 if [ ! -f deploy-plan.json ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/master/deploy-plan.json --create-dirs -o deploy-plan.json
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/deploy-plan.json --create-dirs -o deploy-plan.json
 fi
 
 #give developers a script to create a new laravel project if a laravel app is not detected
 if [ ! -d app ]; then
        if [ ! -f new-laravel-app.sh ]; then
-              curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/master/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
+              curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
               chmod +x new-laravel-app.sh
        fi
 fi
@@ -77,7 +80,7 @@ fi
 #     done
 
 #     if [[ "$new_app" == "y" || "$new_app" == "Y" ]]; then
-#         curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/master/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
+#         curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
 #         chmod +x new-laravel-app.sh
 #         ./new-laravel-app.sh
 #         rm new-laravel-app.sh

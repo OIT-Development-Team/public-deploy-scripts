@@ -1,0 +1,20 @@
+name: Run Laravel Pint
+
+on:
+  push:
+    branches: ["**"]
+    # Ignore commits by GitHub Actions bot to avoid loops
+    paths-ignore:
+      - '.github/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Needed to push commits
+
+jobs:
+  run-pint:
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/pint-fix.yml@pint
+    with:
+      repository: ${{ github.repository }}
+      branch: ${{ github.ref_name }}
+    secrets: inherit

@@ -1,18 +1,21 @@
 name: Build PHP
 
 on:
-  push:
-    branches: ["test", "prod"]
-    tags: ["**"]
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["Run Laravel Pint"]  # Must exactly match the `name:` in call-pint.yml
+    types:
+      - completed
 
 permissions:
   contents: read
 
 jobs:
   trigger-deployment:
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.head_branch == 'test' || github.event.workflow_run.head_branch == 'prod')
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@pint
     with:
-      repository: ${{ github.repository }}
-      branch: ${{ github.ref_name }}
+      repository: ${{ github.event.workflow_run.head_repository.full_name }}
+      branch: ${{ github.event.workflow_run.head_branch }}
     secrets: inherit
