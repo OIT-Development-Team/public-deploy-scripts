@@ -23,9 +23,6 @@ done
 if [ ! -f .github/workflows/build.yaml ]; then
        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/build.yaml --create-dirs -o .github/workflows/build.yaml
 fi
-if [ ! -f .github/workflows/call-pint.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/pint/call-pint.yaml --create-dirs -o .github/workflows/call-pint.yaml
-fi
 
 #Pull down docker-compose.yaml file
 if [ ! -f docker-compose.yaml ]; then
