@@ -3,3 +3,18 @@
 @tailwind utilities;
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme {
+	--color-ua-gray: oklch(0.95 0 0);
+	--color-crimson: oklch(0.46 0.1636 18.32);
+	--color-crimson-50: oklch(0.7 0.1919 23.47);
+    --color-crimson-100: oklch(0.66 0.2292 26.25);
+    --color-crimson-200: oklch(0.63 0.2531 28.68);
+    --color-crimson-300: oklch(0.59 0.2422 29.23);
+    --color-crimson-400: oklch(0.51 0.209771 29.2339);
+    --color-crimson-500: oklch(0.46 0.1636 18.32);
+    --color-crimson-600: oklch(0.31 0.1269 29.23);
+    --color-crimson-700: oklch(0.18 0.0724 29.23);
+    --color-crimson-800: oklch(0 0 0);
+    --color-crimson-900: oklch(0 0 0);
+}
