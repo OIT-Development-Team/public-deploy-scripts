@@ -197,7 +197,7 @@ EOL
     #-------------------------------------------------------------------------------------
 
     # Update the vite.config.js file
-    curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/heads/pint/vite.config.js -o vite.config.js
+    curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/vite.config.js -o vite.config.js
     echo "Updated vite config"
 
     #-------------------------------------------------------------------------------------
