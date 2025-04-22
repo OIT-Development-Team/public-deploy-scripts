@@ -40,6 +40,7 @@ if [ ! -d app ]; then
         composer create-project laravel/laravel new-app
         echo "✅ Laravel project created with Tailwind."
     else
+        composer create-project laravel/laravel new-app
         echo "Removing Tailwind-related files..."
         rm -f new-app/tailwind.config.js new-app/postcss.config.js
         sed -i '/@tailwind/d' new-app/resources/css/app.css
