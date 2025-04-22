@@ -42,6 +42,7 @@ if [ ! -d app ]; then
         sed -i '/@source .*\.js.*;/a @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));' new-app/resources/css/app.css
 		sed -i '/@custom-variant dark/i\\' new-app/resources/css/app.css
 		sed -i '/^@theme {/,/^}/c @theme {\n\t--color-ua-gray: oklch(0.95 0 0);\n\t--color-crimson: oklch(0.46 0.1636 18.32);\n\t--color-crimson-50: oklch(0.7 0.1919 23.47);\n\t--color-crimson-100: oklch(0.66 0.2292 26.25);\n\t--color-crimson-200: oklch(0.63 0.2531 28.68);\n\t--color-crimson-300: oklch(0.59 0.2422 29.23);\n\t--color-crimson-400: oklch(0.51 0.209771 29.2339);\n\t--color-crimson-500: oklch(0.46 0.1636 18.32);\n\t--color-crimson-600: oklch(0.31 0.1269 29.23);\n\t--color-crimson-700: oklch(0.18 0.0724 29.23);\n\t--color-crimson-800: oklch(0 0 0);\n\t--color-crimson-900: oklch(0 0 0);\n}' new-app/resources/css/app.css
+		curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/tailwind.config.js -o tailwind.config.js
         echo "✅ Laravel project created with Tailwind."
     else
         composer create-project laravel/laravel new-app
@@ -253,15 +254,6 @@ EOL
         composer require livewire/livewire
         echo "Livewire Installed"
     fi
-
-    #-------------------------------------------------------------------------------------
-
-    # Install Tailwind
-    #if $tailwind; then
-    #    echo "Installing Tailwind..."
-    #    curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/app.css -o resources/css/app.css
-    #    echo "Installed Tailwind"
-    #fi
 
     #-------------------------------------------------------------------------------------
 
