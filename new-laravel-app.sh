@@ -36,9 +36,11 @@ if [ ! -d app ]; then
 
     # Install with or without Tailwind
     if $tailwind; then
+		echo "Creating Laravel project with Tailwind..." && \
         composer create-project laravel/laravel new-app && \
         echo "✅ Laravel project created with Tailwind."
     else
+		echo "Creating Laravel project without Tailwind..." && \
         composer create-project laravel/laravel new-app && \
         rm -f new-app/tailwind.config.js new-app/postcss.config.js && \
         sed -i '/@tailwind/d' new-app/resources/css/app.css && \
