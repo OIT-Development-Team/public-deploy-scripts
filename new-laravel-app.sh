@@ -33,7 +33,23 @@ done
 # Check if the 'app' directory exists
 if [ ! -d app ]; then
     export COMPOSER_PROCESS_TIMEOUT=600
-    composer create-project laravel/laravel new-app
+
+    # Install with or without Tailwind
+    if $tailwind; then
+        composer create-project laravel/laravel new-app && \
+        echo "✅ Laravel project created with Tailwind."
+    else
+        composer create-project laravel/laravel new-app && \
+        rm -f new-app/tailwind.config.js new-app/postcss.config.js && \
+        sed -i '/@tailwind/d' new-app/resources/css/app.css && \
+        sed -i '/@tailwindcss\/vite/d' new-app/vite.config.js && \
+        sed -i '/"tailwindcss":/d' new-app/package.json && \
+        sed -i '/"postcss":/d' new-app/package.json && \
+        sed -i '/"autoprefixer":/d' new-app/package.json && \
+        sed -i '/"@tailwindcss\/vite":/d' new-app/package.json && \
+        echo "✅ Laravel project created without Tailwind."
+    fi
+
     mv new-app/* .
     cp new-app/.* .
     rm -rf new-app
@@ -197,7 +213,10 @@ EOL
     #-------------------------------------------------------------------------------------
 
     # Update the vite.config.js file
-    curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/vite.config.js -o vite.config.js
+    sed -i '/^export default defineConfig({/a\
+        server: {\
+            host: true,\
+        },' vite.config.js
     echo "Updated vite config"
 
     #-------------------------------------------------------------------------------------
@@ -218,13 +237,11 @@ EOL
     #-------------------------------------------------------------------------------------
 
     # Install Tailwind
-    if $tailwind; then
-        echo "Installing Tailwind..."
-        npm install -D tailwindcss @tailwindcss/vite
-        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/tailwind.config.js -o tailwind.config.js
-        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/app.css -o resources/css/app.css
-        echo "Installed Tailwind"
-    fi
+    #if $tailwind; then
+    #    echo "Installing Tailwind..."
+    #    curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/app.css -o resources/css/app.css
+    #    echo "Installed Tailwind"
+    #fi
 
     #-------------------------------------------------------------------------------------
 
