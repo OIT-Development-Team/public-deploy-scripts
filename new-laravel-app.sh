@@ -38,29 +38,10 @@ if [ ! -d app ]; then
     if $tailwind; then
         echo "Creating Laravel project with Tailwind..."
         composer create-project laravel/laravel new-app
-		# Overwrite app.css with Tailwind 4 setup
-        cat > new-app/resources/css/app.css <<EOF
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
-
-@theme {
-	--color-ua-gray: oklch(0.95 0 0);
-	--color-crimson: oklch(0.46 0.1636 18.32);
-	--color-crimson-50: oklch(0.7 0.1919 23.47);
-	--color-crimson-100: oklch(0.66 0.2292 26.25);
-	--color-crimson-200: oklch(0.63 0.2531 28.68);
-	--color-crimson-300: oklch(0.59 0.2422 29.23);
-	--color-crimson-400: oklch(0.51 0.209771 29.2339);
-	--color-crimson-500: oklch(0.46 0.1636 18.32);
-	--color-crimson-600: oklch(0.31 0.1269 29.23);
-	--color-crimson-700: oklch(0.18 0.0724 29.23);
-	--color-crimson-800: oklch(0 0 0);
-	--color-crimson-900: oklch(0 0 0);
-}
-EOF
+		# Tailwind customizations
+        sed -i '/@source .*\.js.*;/a @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));' new-app/resources/css/app.css
+		sed -i '/@custom-variant dark/i\\' new-app/resources/css/app.css
+		sed -i '/^@theme {/,/^}/c @theme {\n\t--color-ua-gray: oklch(0.95 0 0);\n\t--color-crimson: oklch(0.46 0.1636 18.32);\n\t--color-crimson-50: oklch(0.7 0.1919 23.47);\n\t--color-crimson-100: oklch(0.66 0.2292 26.25);\n\t--color-crimson-200: oklch(0.63 0.2531 28.68);\n\t--color-crimson-300: oklch(0.59 0.2422 29.23);\n\t--color-crimson-400: oklch(0.51 0.209771 29.2339);\n\t--color-crimson-500: oklch(0.46 0.1636 18.32);\n\t--color-crimson-600: oklch(0.31 0.1269 29.23);\n\t--color-crimson-700: oklch(0.18 0.0724 29.23);\n\t--color-crimson-800: oklch(0 0 0);\n\t--color-crimson-900: oklch(0 0 0);\n}' new-app/resources/css/app.css
         echo "✅ Laravel project created with Tailwind."
     else
         composer create-project laravel/laravel new-app
