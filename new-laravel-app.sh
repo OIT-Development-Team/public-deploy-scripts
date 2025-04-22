@@ -58,10 +58,10 @@ if [ ! -d app ]; then
         sed -i '/"@tailwindcss\/vite":/d' new-app/package.json
         # Write new app.css with clean :root
         cat > new-app/resources/css/app.css <<-EOL
-        	:root {
-        	    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        	        'Segoe UI Symbol', 'Noto Color Emoji';
-        	}
+:root {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
 EOL
         echo "✅ Laravel project created without Tailwind."
     fi
@@ -230,9 +230,9 @@ EOL
 
     # Update the vite.config.js file
     sed -i '/^export default defineConfig({/a\
-        server: {\
-            host: true,\
-        },' vite.config.js
+    server: {\
+        host: true,\
+    },' vite.config.js
     echo "Updated vite config"
 
     #-------------------------------------------------------------------------------------
