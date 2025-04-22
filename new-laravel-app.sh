@@ -42,6 +42,7 @@ if [ ! -d app ]; then
         composer create-project laravel/laravel new-app && \
         rm -f new-app/tailwind.config.js new-app/postcss.config.js && \
         sed -i '/@tailwind/d' new-app/resources/css/app.css && \
+		sed -i "/@import 'tailwindcss';/d" new-app/resources/css/app.css && \
         sed -i '/@tailwindcss\/vite/d' new-app/vite.config.js && \
         sed -i '/"tailwindcss":/d' new-app/package.json && \
         sed -i '/"postcss":/d' new-app/package.json && \
