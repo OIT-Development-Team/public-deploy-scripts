@@ -3,24 +3,23 @@
 
 # Set default values for boolean options
 provision_app=false
-forward_args=()
+FORWARD_ARGS=""
 
 # Parse command-line arguments
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
   case "$1" in
     --new)
       provision_app=true
-      shift
-    ;;
+      ;;
     --no-tailwind|--no-livewire|--livewire|--tailwind)
-      forward_args+=("$1")
-      shift
-    ;;
+      FORWARD_ARGS="$FORWARD_ARGS $1"
+      ;;
     *)
       echo "Unknown option: $1"
       exit 1
-    ;;
+      ;;
   esac
+  shift
 done
 
 #Pull down github action file
@@ -73,7 +72,7 @@ fi
 
 if $provision_app; then
     echo "Creating New Laravel Application!"
-    docker exec -it app ./new-laravel-app.sh "${forward_args[@]}"
+    docker exec -it app ./new-laravel-app.sh $FORWARD_ARGS
     rm new-laravel-app.sh
 fi
 
