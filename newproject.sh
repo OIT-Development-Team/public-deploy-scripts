@@ -3,12 +3,17 @@
 
 # Set default values for boolean options
 provision_app=false
+forward_args=()
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --new)
       provision_app=true
+      shift
+    ;;
+    --no-tailwind|--no-livewire|--livewire|--tailwind)
+      forward_args+=("$1")
       shift
     ;;
     *)
@@ -68,7 +73,7 @@ fi
 
 if $provision_app; then
     echo "Creating New Laravel Application!"
-    docker exec -it app ./new-laravel-app.sh "$@"
+    docker exec -it app ./new-laravel-app.sh "${forward_args[@]}"
     rm new-laravel-app.sh
 fi
 
