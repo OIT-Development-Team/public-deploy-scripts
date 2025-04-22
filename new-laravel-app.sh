@@ -36,23 +36,23 @@ if [ ! -d app ]; then
 
     # Install with or without Tailwind
     if $tailwind; then
-		echo "Creating Laravel project with Tailwind..." && \
-        composer create-project laravel/laravel new-app && \
+		echo "Creating Laravel project with Tailwind..."
+        composer create-project laravel/laravel new-app
         echo "✅ Laravel project created with Tailwind."
     else
-		echo "Creating Laravel project without Tailwind..." && \
-        composer create-project laravel/laravel new-app && \
-        rm -f new-app/tailwind.config.js new-app/postcss.config.js && \
-        sed -i '/@tailwind/d' new-app/resources/css/app.css && \
-        sed -i "/@import 'tailwindcss';/d" new-app/resources/css/app.css && \
-        sed -i '/^@source /d' new-app/resources/css/app.css && \
-        sed -i '/^@theme {/,/^}/d' new-app/resources/css/app.css && \
-        echo ":root {\n    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',\n        'Segoe UI Symbol', 'Noto Color Emoji';\n}\n" > new-app/resources/css/app.css && \
-        sed -i '/@tailwindcss\/vite/d' new-app/vite.config.js && \
-        sed -i '/"tailwindcss":/d' new-app/package.json && \
-        sed -i '/"postcss":/d' new-app/package.json && \
-        sed -i '/"autoprefixer":/d' new-app/package.json && \
-        sed -i '/"@tailwindcss\/vite":/d' new-app/package.json && \
+		echo "Creating Laravel project without Tailwind..."
+        composer create-project laravel/laravel new-app 
+        rm -f new-app/tailwind.config.js new-app/postcss.config.js
+        sed -i '/@tailwind/d' new-app/resources/css/app.css
+        sed -i "/@import 'tailwindcss';/d" new-app/resources/css/app.css
+        sed -i '/^@source /d' new-app/resources/css/app.css
+        sed -i '/^@theme {/,/^}/d' new-app/resources/css/app.css
+        echo ":root {\n    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',\n        'Segoe UI Symbol', 'Noto Color Emoji';\n}\n" > new-app/resources/css/app.css
+        sed -i '/@tailwindcss\/vite/d' new-app/vite.config.js
+        sed -i '/"tailwindcss":/d' new-app/package.json
+        sed -i '/"postcss":/d' new-app/package.json
+        sed -i '/"autoprefixer":/d' new-app/package.json
+        sed -i '/"@tailwindcss\/vite":/d' new-app/package.json
         echo "✅ Laravel project created without Tailwind."
     fi
 
