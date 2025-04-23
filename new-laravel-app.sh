@@ -3,6 +3,7 @@
 # Set default values for boolean options
 livewire=true
 tailwind=true
+windows=false
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -23,6 +24,14 @@ while [[ $# -gt 0 ]]; do
       tailwind=false
       shift
     ;;
+	--windows)
+	  windows=true
+	  shift
+	;;
+	--no-windows)
+	  windows=false
+	  shift
+	;;
     *)
       echo "Unknown option: $1"
       exit 1
@@ -234,13 +243,20 @@ EOL
     #-------------------------------------------------------------------------------------
 
     # Update the vite.config.js file
-    sed -i "/^export default defineConfig({/a\\
-    server: {\n\
-        host: '0.0.0.0',\n\
-        hmr: {\n\
-            host: 'localhost',\n\
-        },\n\
-    }," vite.config.js
+    if $windos; then
+        sed -i "/^export default defineConfig({/a\\
+        server: {\n\
+            host: '0.0.0.0',\n\
+            hmr: {\n\
+                host: 'localhost',\n\
+            },\n\
+        }," vite.config.js
+    else
+        sed -i "/^export default defineConfig({/a\\
+        server: {\n\
+            host: true,
+        }," vite.config.js
+	fi
     echo "Updated vite config"
 
     #-------------------------------------------------------------------------------------
