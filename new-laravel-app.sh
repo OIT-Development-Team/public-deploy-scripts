@@ -245,17 +245,17 @@ EOL
     # Update the vite.config.js file
     if $windos; then
         sed -i "/^export default defineConfig({/a\\
-        server: {\n\
-            host: '0.0.0.0',\n\
-            hmr: {\n\
-                host: 'localhost',\n\
-            },\n\
-        }," vite.config.js
+    server: {\n\
+        host: '0.0.0.0',\n\
+        hmr: {\n\
+            host: 'localhost',\n\
+        },\n\
+    }," vite.config.js
     else
         sed -i "/^export default defineConfig({/a\\
-        server: {\n\
-            host: true,
-        }," vite.config.js
+    server: {\n\
+        host: true,
+    }," vite.config.js
 	fi
     echo "Updated vite config"
 
