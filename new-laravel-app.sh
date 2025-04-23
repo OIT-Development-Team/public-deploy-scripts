@@ -242,7 +242,7 @@ EOL
     #-------------------------------------------------------------------------------------
 
     # Update the vite.config.js file
-    if $windos; then
+    if $windows; then
         sed -i "/^export default defineConfig({/a\\
     server: {\n\
         host: '0.0.0.0',\n\
