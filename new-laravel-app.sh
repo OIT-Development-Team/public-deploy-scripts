@@ -236,16 +236,11 @@ EOL
     # Update the vite.config.js file
     sed -i '/^export default defineConfig({/a\
     server: {\
-        host: true,\
+		host: '0.0.0.0',\
+        hmr: {\
+            host: 'localhost',\
+        },\
     },' vite.config.js
-	sed -i "/^    ],/a\\
-    server: {\n\
-        host: '0.0.0.0',\n\
-        hmr: {\n\
-            host: 'localhost',\n\
-        },\n\
-    },
-    " new-app/vite.config.js
     echo "Updated vite config"
 
     #-------------------------------------------------------------------------------------
