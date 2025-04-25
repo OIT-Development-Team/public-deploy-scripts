@@ -1,12 +1,12 @@
 {
 	"build": {
-		"php": "8.3",
+		"php": "8.4",
 		"run_npm": "true",
 		"npm_run_command": "npm run build"
 	},
 	"image": {
 		"name": "uadevelopment/php",
-		"tag": "8.3-latest",
+		"tag": "8.4-latest",
 		"databases": [
 			"sqlite"
 		],
