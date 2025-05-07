@@ -11,7 +11,7 @@ while [ $# -gt 0 ]; do
     --new)
       provision_app=true
       ;;
-    --livewire|--no-livewire|--tailwind|--no-tailwind|--windows|--no-windows)
+    --livewire|--no-livewire|--tailwind|--no-tailwind|--ua-template|--no-ua-template|--windows|--no-windows)
       FORWARD_ARGS="$FORWARD_ARGS $1"
       ;;
     *)
