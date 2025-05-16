@@ -30,6 +30,7 @@ fi
 #Pull down git pre-commit hook file
 if [ ! -f .git/hooks/pre-commit ]; then
        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/laravel-hooks/pre-commit --create-dirs -o .git/hooks/pre-commit
+	   chmod +x .git/hooks/pre-commit
 fi
 
 #Pull down docker-compose.yaml file
