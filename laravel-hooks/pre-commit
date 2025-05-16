@@ -1,0 +1,76 @@
+#!/bin/sh
+
+CONTAINER_NAME="app"
+PINT_PATH="./vendor/bin/pint"
+
+# Cross-platform project path detection
+detect_project_dir() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -am .
+    elif command -v realpath >/dev/null 2>&1; then
+        realpath .
+    else
+        pwd
+    fi
+}
+
+PROJECT_DIR=$(detect_project_dir)
+
+# Check if container is running
+is_container_running() {
+    docker ps --format '{{.Names}}' | grep -q "^$CONTAINER_NAME\$"
+}
+
+# Normalize paths and check if container mount ends with the project directory
+is_same_project() {
+    mount_paths=$(docker inspect "$CONTAINER_NAME" \
+        --format '{{ range .Mounts }}{{ .Source }}{{ "\n" }}{{ end }}' 2>/dev/null | tr -d '\r')
+
+    norm_proj=$(echo "$PROJECT_DIR" | tr '\\' '/' | tr '[:upper:]' '[:lower:]')
+    matched="false"
+
+    while IFS= read -r mount; do
+        norm_mount=$(echo "$mount" | tr '\\' '/' | tr '[:upper:]' '[:lower:]')
+        case "$norm_mount" in
+            *"$norm_proj") matched="true"; break ;;
+        esac
+    done <<EOF
+$mount_paths
+EOF
+
+    [ "$matched" = "true" ]
+}
+
+# Handle container state
+if is_container_running; then
+    if is_same_project; then
+        echo "✅ Found matching '$CONTAINER_NAME' container for this project."
+    else
+        echo "⚠️ Found '$CONTAINER_NAME' container for a different project."
+        echo "🛑 Stopping and removing it..."
+        docker stop "$CONTAINER_NAME" >/dev/null
+        docker rm "$CONTAINER_NAME" >/dev/null
+        echo "🚀 Starting '$CONTAINER_NAME' container for this project..."
+        docker compose up -d "$CONTAINER_NAME"
+        sleep 2
+    fi
+else
+    echo "🚀 No '$CONTAINER_NAME' container running. Starting one for this project..."
+    docker compose up -d "$CONTAINER_NAME"
+    sleep 2
+fi
+
+# Run Pint inside container
+echo "🔧 Running Laravel Pint inside $CONTAINER_NAME..."
+docker exec -u webuser "$CONTAINER_NAME" "$PINT_PATH"
+
+# Stage changes if Pint modified anything
+if ! git diff --quiet; then
+    echo "📥 Pint made changes. Staging them..."
+    git add .
+else
+    echo "✅ No changes made by Pint."
+fi
+
+echo "✅ Continuing with commit."
+exit 0

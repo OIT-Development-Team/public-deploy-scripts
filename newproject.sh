@@ -27,6 +27,11 @@ if [ ! -f .github/workflows/build.yaml ]; then
        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/build.yaml --create-dirs -o .github/workflows/build.yaml
 fi
 
+#Pull down git pre-commit hook file
+if [ ! -f .git/hooks/pre-commit ]; then
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/laravel-hooks/pre-commit --create-dirs -o .git/hooks/pre-commit
+fi
+
 #Pull down docker-compose.yaml file
 if [ ! -f docker-compose.yaml ]; then
        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/docker-compose.yaml --create-dirs -o docker-compose.yaml
