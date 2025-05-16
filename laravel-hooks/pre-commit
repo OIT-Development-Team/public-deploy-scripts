@@ -16,6 +16,13 @@ detect_project_dir() {
 
 PROJECT_DIR=$(detect_project_dir)
 
+# Determine which docker compose command to use
+if command -v docker-compose >/dev/null 2>&1; then
+    DC_COMMAND="docker-compose"
+else
+    DC_COMMAND="docker compose"
+fi
+
 # Check if container is running
 is_container_running() {
     docker ps --format '{{.Names}}' | grep -q "^$CONTAINER_NAME\$"
@@ -26,11 +33,11 @@ is_same_project() {
     mount_paths=$(docker inspect "$CONTAINER_NAME" \
         --format '{{ range .Mounts }}{{ .Source }}{{ "\n" }}{{ end }}' 2>/dev/null | tr -d '\r')
 
-    norm_proj=$(echo "$PROJECT_DIR" | tr '\\' '/' | tr '[:upper:]' '[:lower:]')
+    norm_proj=$(echo "$PROJECT_DIR" | tr '\\' '/' | tr '[:upper:]' '[:lower:]' | sed 's:/*$::')
     matched="false"
 
     while IFS= read -r mount; do
-        norm_mount=$(echo "$mount" | tr '\\' '/' | tr '[:upper:]' '[:lower:]')
+        norm_mount=$(echo "$mount" | tr '\\' '/' | tr '[:upper:]' '[:lower:]' | sed 's:/*$::')
         case "$norm_mount" in
             *"$norm_proj") matched="true"; break ;;
         esac
@@ -51,12 +58,12 @@ if is_container_running; then
         docker stop "$CONTAINER_NAME" >/dev/null
         docker rm "$CONTAINER_NAME" >/dev/null
         echo "🚀 Starting '$CONTAINER_NAME' container for this project..."
-        docker compose up -d "$CONTAINER_NAME"
+        $DC_COMMAND up -d "$CONTAINER_NAME"
         sleep 2
     fi
 else
     echo "🚀 No '$CONTAINER_NAME' container running. Starting one for this project..."
-    docker compose up -d "$CONTAINER_NAME"
+    $DC_COMMAND up -d "$CONTAINER_NAME"
     sleep 2
 fi
 
