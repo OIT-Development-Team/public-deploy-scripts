@@ -258,23 +258,25 @@ EOL
 
     #-------------------------------------------------------------------------------------
 
-    # Update the vite.config.js file
+	# Update the vite.config.js file
 	echo -e "\nUpdating vite config..."
-    if $windows; then
-        sed -i "/^export default defineConfig({/a\\
-    server: {\n\
-        host: '0.0.0.0',\n\
-        hmr: {\n\
-            host: 'localhost',\n\
-        },\n\
-    }" vite.config.js
-    else
-        sed -i "/^export default defineConfig({/a\\
-    server: {\n\
-        host: true,
-    }" vite.config.js
+	if $windows; then
+		sed -i "/^export default defineConfig({/a\\
+	server: {\n\
+		host: '0.0.0.0',\n\
+		hmr: {\n\
+			host: 'localhost'\n\
+		}\n\
+	},\
+	" vite.config.js
+	else
+		sed -i "/^export default defineConfig({/a\\
+	server: {\n\
+		host: true\n\
+	},\
+	" vite.config.js
 	fi
-    echo "✅ Vite config updated."
+	echo "✅ Vite config updated."
 
     #-------------------------------------------------------------------------------------
 
