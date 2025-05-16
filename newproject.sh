@@ -24,23 +24,23 @@ done
 
 #Pull down github action file
 if [ ! -f .github/workflows/build.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/build.yaml --create-dirs -o .github/workflows/build.yaml
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/build.yaml --create-dirs -o .github/workflows/build.yaml
 fi
 
 #Pull down docker-compose.yaml file
 if [ ! -f docker-compose.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/docker-compose.yaml --create-dirs -o docker-compose.yaml
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/docker-compose.yaml --create-dirs -o docker-compose.yaml
 fi
 
 #Pull down deploy-plan.json file
 if [ ! -f deploy-plan.json ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/deploy-plan.json --create-dirs -o deploy-plan.json
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/deploy-plan.json --create-dirs -o deploy-plan.json
 fi
 
 #give developers a script to create a new laravel project if a laravel app is not detected
 if [ ! -d app ]; then
        if [ ! -f new-laravel-app.sh ]; then
-              curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/pint/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
+              curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
               chmod +x new-laravel-app.sh
        fi
 fi

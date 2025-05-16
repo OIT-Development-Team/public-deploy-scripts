@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   run-pint:
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/pint-fix.yml@pint
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/pint-fix.yml@main
     with:
       repository: ${{ github.repository }}
       branch: ${{ github.ref_name }}
@@ -24,7 +24,7 @@ jobs:
       needs.run-pint.result == 'success' &&
       (github.ref_name == 'test' || github.ref_name == 'prod')
     needs: run-pint
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@pint
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
     with:
       repository: ${{ github.repository }}
       branch: ${{ github.ref_name }}
