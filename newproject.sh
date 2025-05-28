@@ -80,6 +80,13 @@ if $provision_app; then
     echo "Creating New Laravel Application!"
     docker exec -it app ./new-laravel-app.sh $FORWARD_ARGS
     rm new-laravel-app.sh
+
+    #init git repo and pull down git pre-commit hook file
+    #has to be ran in this file because the container does not have git installed
+    git init
+    curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/laravel-hooks/pre-commit --create-dirs -o .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+    echo "✅ Git initialized and pre-commit hook installed."
 fi
 
 # run npm run dev in the bg if theres an app folder and package-lock.json (npm install has been ran)
