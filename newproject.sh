@@ -24,23 +24,23 @@ done
 
 #Pull down github action file
 if [ ! -f .github/workflows/build.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/build.yaml --create-dirs -o .github/workflows/build.yaml
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml --create-dirs -o .github/workflows/build.yaml
 fi
 
 #Pull down git pre-commit hook file
 if [ ! -f .git/hooks/pre-commit ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/laravel-hooks/pre-commit --create-dirs -o .git/hooks/pre-commit
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit --create-dirs -o .git/hooks/pre-commit
 	   chmod +x .git/hooks/pre-commit
 fi
 
 #Pull down docker-compose.yaml file
 if [ ! -f docker-compose.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/docker-compose.yaml --create-dirs -o docker-compose.yaml
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml --create-dirs -o docker-compose.yaml
 fi
 
 #Pull down deploy-plan.json file
 if [ ! -f deploy-plan.json ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/deploy-plan.json --create-dirs -o deploy-plan.json
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json --create-dirs -o deploy-plan.json
 fi
 
 # Pull and run add-pv.sh if the --pv flag is used.
