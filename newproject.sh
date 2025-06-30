@@ -11,7 +11,7 @@ while [ $# -gt 0 ]; do
     --new)
       provision_app=true
       ;;
-    --livewire|--no-livewire|--tailwind|--no-tailwind|--ua-template|--no-ua-template|--windows|--no-windows)
+    --livewire|--no-livewire|--pv|--tailwind|--no-tailwind|--ua-template|--no-ua-template|--windows|--no-windows)
       FORWARD_ARGS="$FORWARD_ARGS $1"
       ;;
     *)
@@ -41,6 +41,14 @@ fi
 #Pull down deploy-plan.json file
 if [ ! -f deploy-plan.json ]; then
        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/deploy-plan.json --create-dirs -o deploy-plan.json
+fi
+
+# Pull and run add-pv.sh if the --pv flag is used.
+if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/add-pv.sh --create-dirs -o add-pv.sh
+       chmod +x add-pv.sh
+       ./add-pv.sh
+	   rm add-pv.sh
 fi
 
 #give developers a script to create a new laravel project if a laravel app is not detected
@@ -78,7 +86,7 @@ fi
 
 if $provision_app; then
     echo "Creating New Laravel Application!"
-    docker exec -it app ./new-laravel-app.sh $FORWARD_ARGS
+    eval docker exec -it app ./new-laravel-app.sh $FORWARD_ARGS
     rm new-laravel-app.sh
 fi
 
