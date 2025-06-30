@@ -86,7 +86,7 @@ fi
 
 if $provision_app; then
     echo "Creating New Laravel Application!"
-    eval docker exec -it app ./new-laravel-app.sh $FORWARD_ARGS
+    docker exec -it app ./new-laravel-app.sh $FORWARD_ARGS
     rm new-laravel-app.sh
 fi
 
