@@ -54,7 +54,7 @@ fi
 #give developers a script to create a new laravel project if a laravel app is not detected
 if [ ! -d app ]; then
        if [ ! -f new-laravel-app.sh ]; then
-              curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
+              curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/new-laravel-app.sh --create-dirs -o new-laravel-app.sh
               chmod +x new-laravel-app.sh
        fi
 fi
