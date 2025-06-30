@@ -45,7 +45,7 @@ fi
 
 # Pull and run add-pv.sh if the --pv flag is used.
 if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/add-pv.sh --create-dirs -o add-pv.sh
+       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh --create-dirs -o add-pv.sh
        chmod +x add-pv.sh
        ./add-pv.sh
 	   rm add-pv.sh
