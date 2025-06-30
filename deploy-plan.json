@@ -7,9 +7,7 @@
 	"image": {
 		"name": "uadevelopment/php",
 		"tag": "8.4-latest",
-		"databases": [
-			"sqlite"
-		],
+		"databases": [],
 		"os_modules": [],
 		"php_extensions": [],
 		"max_file_size": "20",
