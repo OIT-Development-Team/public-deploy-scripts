@@ -44,12 +44,12 @@ if [ ! -f deploy-plan.json ]; then
 fi
 
 # Pull and run add-pv.sh if the --pv flag is used.
-if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
+#if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
        curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/tags/stable/add-pv.sh --create-dirs -o add-pv.sh
        chmod +x add-pv.sh
        ./add-pv.sh
 	   rm add-pv.sh
-fi
+#fi
 
 #give developers a script to create a new laravel project if a laravel app is not detected
 if [ ! -d app ]; then
