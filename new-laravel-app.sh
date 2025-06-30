@@ -23,6 +23,9 @@ while [[ $# -gt 0 ]]; do
       livewire=false
       shift
     ;;
+    --pv)
+      shift
+    ;;
     --tailwind)
       tailwind=true
       shift
