@@ -6,20 +6,19 @@ provision_app=false
 FORWARD_ARGS=""
 
 # Parse command-line arguments
-while [ $# -gt 0 ]; do
-  case "$1" in
+for arg in "$@"; do
+  case "$arg" in
     --new)
       provision_app=true
       ;;
     --livewire|--no-livewire|--pv|--tailwind|--no-tailwind|--ua-template|--no-ua-template|--windows|--no-windows)
-      FORWARD_ARGS="$FORWARD_ARGS $1"
+      FORWARD_ARGS="$FORWARD_ARGS $arg"
       ;;
     *)
-      echo "Unknown option: $1"
+      echo "Unknown option: $arg"
       exit 1
       ;;
   esac
-  shift
 done
 
 #Pull down github action file
