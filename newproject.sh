@@ -2,6 +2,7 @@
 #Version 1.8
 
 # Set default values for boolean options
+run_npm=true
 provision_app=false
 FORWARD_ARGS=""
 
@@ -11,7 +12,7 @@ while [ $# -gt 0 ]; do
     --new)
       provision_app=true
       ;;
-    --livewire|--no-livewire|--pv|--tailwind|--no-tailwind|--ua-template|--no-ua-template|--windows|--no-windows)
+    --livewire|--no-livewire|--npm|--no-npm|--pv|--tailwind|--no-tailwind|--ua-template|--no-ua-template|--windows|--no-windows)
       FORWARD_ARGS="$FORWARD_ARGS $1"
       ;;
     *)
@@ -21,6 +22,28 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+# Override $run_npm from deploy-plan.json if it exists
+if [ -f ./deploy-plan.json ]; then
+    raw_npm=$(php -r "echo json_encode(json_decode(file_get_contents('deploy-plan.json'), true)['build']['run_npm'] ?? true);")
+    case "$raw_npm" in
+        false|\"false\")
+            run_npm=false
+            ;;
+        *)
+            run_npm=true
+            ;;
+    esac
+else
+    run_npm=true
+fi
+
+# Override $run_npm with explicit CLI flags
+if echo "$FORWARD_ARGS" | grep -qw -- --npm; then
+  run_npm=true
+elif echo "$FORWARD_ARGS" | grep -qw -- --no-npm; then
+  run_npm=false
+fi
 
 # Pull down github action file
 if [ ! -f .github/workflows/build.yaml ]; then
@@ -91,8 +114,10 @@ if $provision_app; then
 fi
 
 # run npm run dev in the bg if theres an app folder and package-lock.json (npm install has been ran)
-echo "Checking to see if we can npm run dev in background..."
-if [ -d app ]; then
-    echo "Running npm run dev in the background..."
-    docker exec -d app npm run dev
+if $run_npm; then
+    echo "Checking to see if we can npm run dev in background..."
+    if [ -d app ]; then
+        echo "Running npm run dev in the background..."
+        docker exec -d app npm run dev
+    fi
 fi

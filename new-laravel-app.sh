@@ -9,7 +9,17 @@ windows=false
 
 # Override $npm from deploy-plan.json if it exists
 if [ -f ./deploy-plan.json ]; then
-    npm=$(php -r "echo json_decode(file_get_contents('deploy-plan.json'), true)['build']['run_npm'] ?? 'false';")
+    raw_npm=$(php -r "echo json_encode(json_decode(file_get_contents('deploy-plan.json'), true)['build']['run_npm'] ?? true);")
+    case "$raw_npm" in
+        false|\"false\")
+            npm=false
+            ;;
+        *)
+            npm=true
+            ;;
+    esac
+else
+    npm=true
 fi
 
 # Parse command-line arguments
@@ -23,6 +33,14 @@ while [[ $# -gt 0 ]]; do
       livewire=false
       shift
     ;;
+	--npm)
+	  npm=true
+	  shift
+	;;
+	--no-npm)
+	  npm=false
+	  shift
+	;;
     --pv)
       shift
     ;;
