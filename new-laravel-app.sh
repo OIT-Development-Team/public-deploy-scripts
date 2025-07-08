@@ -117,7 +117,7 @@ EOL
     fi
 
     mv new-app/* .
-    cp new-app/.* .
+    cp -r new-app/. ./
     rm -rf new-app
 
     # Ensure the trustProxies is configured in bootstrap/app.php
