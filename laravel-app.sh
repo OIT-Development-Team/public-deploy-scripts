@@ -28,7 +28,6 @@ LARAVEL_INSTALLER="vendor/laravel/installer/src/NewCommand.php"
 TAILWIND=true
 TEMP_DIR="./new-app"
 UA_TEMPLATE=true
-WINDOWS=false
 
 # --------------------------------------
 # 🧾 Parse command-line flags
@@ -38,7 +37,6 @@ while [ "$#" -gt 0 ]; do
         --pv) shift ;;
         --no-tailwind) TAILWIND=false; shift ;;
         --no-ua-template) UA_TEMPLATE=false; shift ;;
-        --windows) WINDOWS=true; shift ;;
         *) printf "${RED}❌ Unknown option: $1${NC}\n"; exit 1 ;;
     esac
 done
@@ -330,22 +328,14 @@ function_configure_vite() {
     printf "${GRAY}🛠️ Configuring Vite settings...${NC}\n"
 
 	if [ -f "$FILE_VITE" ]; then
-    	if [ "$WINDOWS" = true ]; then
-    	    sed -i "/^export default defineConfig({/a\\
+    	sed -i "/^export default defineConfig({/a\\
     server: {\n\
         host: '0.0.0.0',\n\
         hmr: {\n\
             host: 'localhost'\n\
         }\n\
     },\
-    	    " "$FILE_VITE"
-    	else
-    	    sed -i "/^export default defineConfig({/a\\
-    server: {\n\
-        host: true\n\
-    },\
-    	    " "$FILE_VITE"
-    	fi
+    	" "$FILE_VITE"
 
 		printf "${GREEN}✅ Vite config updated.${NC}\n"
     else
