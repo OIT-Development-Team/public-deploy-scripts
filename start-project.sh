@@ -26,22 +26,22 @@ done
 # 📦 Pull Supporting Files
 # --------------------------------------
 [ ! -f .github/workflows/build.yaml ] && \
-	curl -sSL --create-dirs -o .github/workflows/build.yaml  https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml
+	curl -sSL --create-dirs -o .github/workflows/build.yaml  https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/later-npm/build.yaml
 
 [ ! -f .git/hooks/pre-commit ] && \
-	curl -sSL --create-dirs -o .git/hooks/pre-commit https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit && chmod +x .git/hooks/pre-commit
+	curl -sSL --create-dirs -o .git/hooks/pre-commit https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/later-npm/laravel-hooks/pre-commit && chmod +x .git/hooks/pre-commit
 
 [ ! -f docker-compose.yaml ] && \
-	curl -sSL -o docker-compose.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml
+	curl -sSL -o docker-compose.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/later-npm/docker-compose.yaml
 
 [ ! -f deploy-plan.json ] && \
-	curl -sSL -o deploy-plan.json https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json
+	curl -sSL -o deploy-plan.json https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/later-npm/deploy-plan.json
 
 # --------------------------------------
 # 🗂️ Handle PV Option
 # --------------------------------------
 if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
-	curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh --create-dirs -o add-pv.sh
+	curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/later-npm/add-pv.sh --create-dirs -o add-pv.sh
 	chmod +x add-pv.sh
 	./add-pv.sh
 	rm add-pv.sh
@@ -51,7 +51,7 @@ fi
 # 🧱 Prepare Laravel Provision Script
 # --------------------------------------
 if [ ! -d app ] && [ ! -f laravel-app.sh ]; then
-	curl -sSL -o laravel-app.sh https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
+	curl -sSL -o laravel-app.sh https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/later-npm/laravel-app.sh
 	chmod +x laravel-app.sh
 fi
 

@@ -24,7 +24,6 @@ FILE_DATABASE="config/database.php"
 FILE_LOGGING="config/logging.php"
 FILE_SESSION="config/session.php"
 FILE_VITE="vite.config.js"
-LARAVEL_INSTALLER="vendor/laravel/installer/src/NewCommand.php"
 TAILWIND=true
 TEMP_DIR="./new-app"
 UA_TEMPLATE=true
@@ -409,6 +408,15 @@ EOL
 	printf "${GREEN}✅ README.md created.${NC}\n"
 }
 
+function_remove_npm_prompt() {
+    local target_file="vendor/laravel/installer/src/NewCommand.php"
+
+    sed -i '/\$runNpm = \$input->getOption('\''npm'\'');/,/^            }$/c\
+            // Run npm install/build ONLY if --npm is explicitly passed; no interactive prompt\
+            $runNpm = $input->getOption('\''npm'\'');\
+' "$target_file"
+}
+
 function_ua_template() {
 	if [ "$UA_TEMPLATE" = true ]; then
     	echo ""
@@ -432,13 +440,16 @@ function_ua_template() {
 
 if [ ! -d app ]; then
     echo ""
-    printf "${ORANGE}🚧 ${WHITE}Starting interactive Laravel scaffolding...${NC}\n"
+    printf "${ORANGE}🚧 Starting interactive Laravel scaffolding...${NC}\n"
     composer require laravel/installer
-    vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
+	function_remove_npm_prompt
+    vendor/bin/laravel new --database=sqlite "$TEMP_DIR"
     composer remove laravel/installer
 
     cp -r "$TEMP_DIR"/. ./
     rm -rf "$TEMP_DIR"
+
+	npm install
 
 	function_configure_caching
 	function_configure_database
