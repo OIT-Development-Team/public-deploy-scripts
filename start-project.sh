@@ -92,4 +92,4 @@ rm laravel-app.sh
 
 echo ""
 echo "Running npm run dev in background..."
-docker exec -d app sh -c 'rm -f start-project.sh && npm run dev'
+docker exec -d app npm run dev
