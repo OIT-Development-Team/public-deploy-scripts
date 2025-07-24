@@ -425,12 +425,12 @@ if [ ! -d app ]; then
     printf "${ORANGE}🚧 ${WHITE}Starting interactive Laravel scaffolding...${NC}\n"
     composer require laravel/installer
     vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
-	npm audit fix
     composer remove laravel/installer
 
     cp -r "$TEMP_DIR"/. ./
     rm -rf "$TEMP_DIR"
 
+	npm audit fix
 	function_configure_caching
 	function_configure_database
 	function_configure_logging
