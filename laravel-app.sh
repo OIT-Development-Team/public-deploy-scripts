@@ -471,7 +471,7 @@ if [ ! -d app ]; then
     vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
     composer remove laravel/installer
 
-    cp -r "$TEMP_DIR"/. ./
+    (cd "$TEMP_DIR" && tar cf - .) | tar xf -
     rm -rf "$TEMP_DIR"
 
 	npm audit fix
