@@ -23,7 +23,7 @@ FILE_CACHING="config/cache.php"
 FILE_DATABASE="config/database.php"
 FILE_LOGGING="config/logging.php"
 FILE_SESSION="config/session.php"
-FILE_VITE="vite.config.js"
+FILE_VITE_BASE="vite.config"
 LARAVEL_INSTALLER="vendor/laravel/installer/src/NewCommand.php"
 TAILWIND=true
 TEMP_DIR="./new-app"
@@ -325,22 +325,66 @@ function_configure_tailwind() {
 
 function_configure_vite() {
 	echo ""
-    printf "${GRAY}🛠️ Configuring Vite settings...${NC}\n"
+	printf "${GRAY}🛠️ Configuring Vite settings...${NC}\n"
 
-	if [ -f "$FILE_VITE" ]; then
-    	sed -i "/^export default defineConfig({/a\\
-    server: {\n\
-        host: '0.0.0.0',\n\
-        hmr: {\n\
-            host: 'localhost'\n\
-        }\n\
-    },\
-    	" "$FILE_VITE"
+	for FILE_VITE in "$FILE_VITE_BASE.js" "$FILE_VITE_BASE.ts"; do
+		if [ ! -f "$FILE_VITE" ]; then
+			printf "${YELLOW}⚠️  Warning: '$FILE_VITE' not found. Skipping vite configuration.${NC}\n"
+			continue
+		fi
 
-		printf "${GREEN}✅ Vite config updated.${NC}\n"
-    else
-        printf "${YELLOW}⚠️  Warning: '$FILE_VITE' not found. Skipping vite configuration.${NC}\n"
-    fi
+		if grep -q 'server:' "$FILE_VITE"; then
+			awk '
+			BEGIN { in_server=0; host_found=0; hmr_found=0; }
+			/server\s*:/ && /\{/ {
+				print;
+				in_server=1;
+				next
+			}
+			in_server && /host\s*:/ {
+				print "        host: '\''0.0.0.0'\'',";
+				host_found=1;
+				next
+			}
+			in_server && /hmr\s*:/ {
+				print "        hmr: {";
+				print "            host: '\''localhost'\''";
+				print "        },";
+				hmr_found=1;
+				# skip original hmr block lines until closing }
+				while(getline > 0) {
+					if ($0 ~ /^\s*},?\s*$/) break
+				}
+				next
+			}
+			in_server && /\}/ {
+				if (!host_found) print "        host: '\''0.0.0.0'\'',"
+				if (!hmr_found) {
+					print "        hmr: {"
+					print "            host: '\''localhost'\''"
+					print "        },"
+				}
+				print
+				in_server=0
+				next
+			}
+			{ print }
+			' "$FILE_VITE" > "$FILE_VITE.tmp" && mv "$FILE_VITE.tmp" "$FILE_VITE"
+
+			printf "${GREEN}✅ Updated 'server' block in $FILE_VITE${NC}\n"
+		else
+			sed -i "/^export default defineConfig({/a\\
+    server: {\\
+        host: '0.0.0.0',\\
+        hmr: {\\
+            host: 'localhost'\\
+        },\\
+    },\\
+" "$FILE_VITE"
+
+			printf "${GREEN}✅ Added 'server' block to $FILE_VITE${NC}\n"
+		fi
+	done
 }
 
 function_create_readme() {
