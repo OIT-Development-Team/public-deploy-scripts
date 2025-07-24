@@ -50,10 +50,8 @@ fi
 # --------------------------------------
 # 🧱 Prepare Laravel Provision Script
 # --------------------------------------
-if [ ! -d app ] && [ ! -f laravel-app.sh ]; then
-	curl -sSL -o laravel-app.sh https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
-	chmod +x laravel-app.sh
-fi
+curl -sSL -o laravel-app.sh https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
+chmod +x laravel-app.sh
 
 # --------------------------------------
 # 🐳 Generate Dockerfile.dev from API
