@@ -469,9 +469,11 @@ if [ ! -d app ]; then
     printf "${ORANGE}🚧 ${WHITE}Starting interactive Laravel scaffolding...${NC}\n"
     composer require laravel/installer
     vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
-    composer remove laravel/installer
 
-    (cd "$TEMP_DIR" && tar cf - .) | tar xf -
+	# This method of moving the applicaiton should avoid any file limit issues
+	rm -rf vendor composer*
+    mv "$TEMP_DIR"/vendor ./
+    find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -exec mv -t . {} +
     rm -rf "$TEMP_DIR"
 
 	npm audit fix
