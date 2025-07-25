@@ -47,7 +47,7 @@ done
 function_tailwind_install() {
     printf "${GRAY}✨ ${WHITE}Installing Tailwind CSS and configs...${NC}\n"
 
-    # Install Tailwind-related packages
+    # Install Tailwind-related packages and update node_modules
     npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
 
     # Create tailwind.config.js if missing
@@ -114,9 +114,6 @@ EOF
             printf "Added Tailwind plugin to '$FILE_VITE'\n"
         fi
     fi
-
-    # Run npm install to update node_modules
-    npm install
 
     printf "${GREEN}✅ ${WHITE}Tailwind installed and configured!${NC}\n"
 }
@@ -470,11 +467,16 @@ if [ ! -d app ]; then
     composer require laravel/installer
     vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
 
-	# This method of moving the applicaiton should avoid any file limit issues
+	echo ""
+	printf "${ORANGE}📦 ${WHITE}Moving project files...${NC}\n"
+	# This method of moving the application should avoid any file limit issues
 	rm -rf vendor composer*
     mv "$TEMP_DIR"/vendor ./
+	rm -rf "$TEMP_DIR"/.git*
     find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -exec mv -t . {} +
     rm -rf "$TEMP_DIR"
+	echo ""
+	printf "\n${GREEN}✅ Project moved!${NC}\n"
 
 	npm audit fix
 	function_configure_caching
