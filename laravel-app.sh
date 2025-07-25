@@ -467,7 +467,6 @@ if [ ! -d app ]; then
     composer require laravel/installer
     vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
 
-	echo ""
 	printf "${ORANGE}📦 ${WHITE}Moving project files...${NC}\n"
 	# This method of moving the application should avoid any file limit issues
 	rm -rf vendor composer*
@@ -475,7 +474,6 @@ if [ ! -d app ]; then
 	rm -rf "$TEMP_DIR"/.git*
     find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -exec mv -t . {} +
     rm -rf "$TEMP_DIR"
-	echo ""
 	printf "\n${GREEN}✅ Project moved!${NC}\n"
 
 	npm audit fix
