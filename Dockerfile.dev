@@ -7,7 +7,7 @@ COPY --from=composer /usr/bin/composer /usr/bin/composer
 USER root
 
 #Install OS Modules
-RUN apk -U upgrade \
+RUN apk --no-cache upgrade \
 	&& apk --no-cache add \
 	nodejs \
 	npm
