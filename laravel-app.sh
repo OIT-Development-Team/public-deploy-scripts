@@ -27,7 +27,7 @@ FILE_VITE_BASE="vite.config"
 LARAVEL_INSTALLER="vendor/laravel/installer/src/NewCommand.php"
 TAILWIND=true
 TEMP_DIR="./new-app"
-UA_TEMPLATE=true
+UA_TEMPLATE=false
 
 # --------------------------------------
 # 🧾 Parse command-line flags
@@ -36,7 +36,7 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         --pv) shift ;;
         --no-tailwind) TAILWIND=false; shift ;;
-        --no-ua-template) UA_TEMPLATE=false; shift ;;
+        --ua-template) UA_TEMPLATE=true; shift ;;
         *) printf "${RED}❌ Unknown option: $1${NC}\n"; exit 1 ;;
     esac
 done

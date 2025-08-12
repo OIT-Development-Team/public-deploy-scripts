@@ -10,7 +10,7 @@ FORWARD_ARGS=""
 # Parse command-line arguments
 while [ $# -gt 0 ]; do
 	case "$1" in
-		--pv|--no-tailwind|--ua-template|--no-ua-template)
+		--pv|--no-tailwind|--ua-template)
 			FORWARD_ARGS="$FORWARD_ARGS $1"
 			;;
 		*)
