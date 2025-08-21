@@ -2,20 +2,28 @@
 # Add PV claims to deploy-plan.json
 set -e
 
-# ------- selectable PVs ----------------------------------------------------
-pvs=(actimages argos-nfs software-download-nfs software-engineering-download-nfs)
-
 echo
+# ------- selectable PVs ----------------------------------------------------
+pvs="actimages argos-nfs software-download-nfs software-engineering-download-nfs"
+
+
 echo "Select the persistent volumes to mount (comma-separated list):"
 echo
-for i in "${!pvs[@]}"; do
-  printf "  %d. %s\n" $((i+1)) "${pvs[$i]}"
+i=1
+for pv in $pvs; do
+  printf "  %d. %s\n" "$i" "$pv"
+  eval "pv_$i=\"$pv\""
+  i=$((i+1))
 done
 echo
-read -rp "Your selection: " raw
-raw=${raw//[[:space:]]/}
-IFS=',' read -ra tokens <<< "$raw"
+printf "Your selection: "
+read raw
 
+# Remove all whitespace
+raw=$(echo "$raw" | tr -d '[:space:]')
+
+# Split input by comma into positional parameters
+IFS=','; set -- $raw
 # ------- ensure .server.volumes exists -------------------------------------
 tmp=$(mktemp)
 cp deploy-plan.json "$tmp"
@@ -30,22 +38,30 @@ fi
 
 # ------- detect existing claims & preserve order ---------------------------
 existing_claims=$(grep -o '"claim"[[:space:]]*:[[:space:]]*"[^"]*"' "$tmp" | sed -E 's/.*"([^"]+)"/\1/')
-new_claims=()
+new_claims=""
 
 base_path_used=$(grep -cq '"mountPath"[[:space:]]*:[[:space:]]*"/var/www/html/storage/app"' "$tmp" && echo 1 || echo 0)
 
-for t in "${tokens[@]}"; do
-  if [[ $t =~ ^[0-9]+$ ]]; then
-    idx=$((t-1))
-    [[ $idx -ge 0 && $idx -lt ${#pvs[@]} ]] || { echo "Index $t is out of range"; exit 1; }
-    claim="${pvs[$idx]}"
-  else
-    claim="$t"
-  fi
+
+for t; do
+  if [ -z "$t" ]; then continue; fi
+  case "$t" in
+    *[!0-9]* ) claim="$t" ;; # non-numeric, treat as direct claim
+    * )
+      idx=$((t))
+      if [ "$idx" -ge 1 ] && [ "$idx" -le 4 ]; then
+        eval "claim=\$pv_$idx"
+      else
+        echo "Index $t is out of range"; exit 1
+      fi
+      ;;
+  esac
 
   # skip if already added or already present
-  if printf '%s\n' "${new_claims[@]}" | grep -qx "$claim"; then continue; fi
-  if printf '%s\n' $existing_claims | grep -qx "$claim"; then continue; fi
+  found=0
+  echo "$new_claims" | grep -q "^$claim|" && found=1
+  echo "$existing_claims" | grep -qx "$claim" && found=1
+  [ "$found" -eq 1 ] && continue
 
   if [ "$base_path_used" -eq 0 ]; then
     default_path="/var/www/html/storage/app"
@@ -63,13 +79,17 @@ for t in "${tokens[@]}"; do
 
   [ "$mount_path" = "/var/www/html/storage/app" ] && base_path_used=1
 
-  new_claims+=("$claim|$mount_path")
+  if [ -n "$new_claims" ]; then
+    new_claims="$new_claims\n$claim|$mount_path"
+  else
+    new_claims="$claim|$mount_path"
+  fi
 done
 
 [ "${#new_claims[@]}" -eq 0 ] && { echo "ℹ️  No new volumes to add."; rm "$tmp"; exit 0; }
 
 # ------- inject volumes ----------------------------------------------------
-awk -v new_claims="$(printf '%s\n' "${new_claims[@]}")" '
+awk -v new_claims="$(printf '%s' "$new_claims" | grep -v '^$')" '
   BEGIN {
     split(new_claims, add, "\n")
     inside=0
