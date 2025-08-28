@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    platform: linux/amd64
     networks:
       - appnet
     volumes:
