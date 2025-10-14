@@ -9,15 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  run-pint:
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/pint-fix.yml@main
-    with:
-      repository: ${{ github.repository }}
-      branch: ${{ github.base_ref || github.ref_name }}
-    secrets: inherit
-
-  build-php:
-    needs: run-pint
+  build:
     uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
     with:
       repository: ${{ github.repository }}
