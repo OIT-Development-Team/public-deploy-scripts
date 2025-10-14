@@ -1,45 +1,22 @@
 name: Run Laravel Pint and Build PHP
 
-# -----------------------
-# Workflow triggers
-# -----------------------
 on:
-  push:                 # run on all branch pushes
-  pull_request_target:  # run in context of the base branch (e.g., prod)
-  workflow_dispatch:    # allow manual trigger from the Actions UI
+  push:
+  pull_request_target:
+  workflow_dispatch:
 
-# -----------------------
-# Permissions
-# -----------------------
 permissions:
-  contents: write       # Needed so Pint can commit and push fixes
+  contents: write
 
-# -----------------------
-# Jobs
-# -----------------------
 jobs:
-  # -----------------------
-  # Job 1: Run Laravel Pint
-  # -----------------------
   run-pint:
-    name: Run Pint (${{ github.base_ref || github.ref_name }})
     uses: ua-app-images/build-laravel-app-image/.github/workflows/pint-fix.yml@main
     with:
       repository: ${{ github.repository }}
       branch: ${{ github.base_ref || github.ref_name }}
     secrets: inherit
 
-  # -----------------------
-  # Job 2: Build PHP
-  # -----------------------
   build-php:
-    name: Build PHP (${{ github.base_ref || github.ref_name }})
-    if: |
-      github.ref == 'refs/heads/test' || 
-      (github.event_name == 'pull_request_target' && github.base_ref == 'prod') ||
-      (github.event_name == 'push' &&
-       github.ref == 'refs/heads/prod' &&
-       startsWith(github.event.head_commit.message, 'Merge pull request'))
     needs: run-pint
     uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
     with:
