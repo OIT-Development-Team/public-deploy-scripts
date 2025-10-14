@@ -41,7 +41,7 @@ jobs:
        github.ref == 'refs/heads/prod' &&
        startsWith(github.event.head_commit.message, 'Merge pull request'))
     needs: run-pint
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@test
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
     with:
       repository: ${{ github.repository }}
       branch: ${{ github.base_ref || github.ref_name }}
