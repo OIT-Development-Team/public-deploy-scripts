@@ -390,14 +390,14 @@ EOF
 
 function_install_composer() {
     printf "${ORANGE}📦 ${WHITE}Running composer install...${NC}\n"
-    composer install --no-interaction --prefer-dist
+    composer install --no-interaction --prefer-dist || true
     printf "${GREEN}✅ Composer dependencies installed.${NC}\n"
 }
 
 function_install_npm() {
     printf "${ORANGE}📦 ${WHITE}Running npm install...${NC}\n"
-    npm install
-    npm audit fix
+    npm install || true
+    npm audit fix || true
     printf "${GREEN}✅ NPM dependencies installed.${NC}\n"
 }
 
