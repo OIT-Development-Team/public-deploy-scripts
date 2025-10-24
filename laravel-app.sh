@@ -506,6 +506,7 @@ else
     [ ! -d node_modules ] && function_install_npm
     [ ! -d vendor ] && function_install_composer
     function_configure_database
+    function_configure_vite
 
     printf "\n${GREEN}✅ Laravel application already exists.${NC}\n"
 fi
