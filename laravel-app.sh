@@ -129,6 +129,50 @@ function_configure_database() {
     fi
 }
 
+function_configure_gitignore() {
+    echo ""
+    printf "${GRAY}🗂️  ${WHITE}Ensuring .gitignore has standard exclusions...${NC}\n"
+    IGNORE_FILE=".gitignore"
+
+    # Create .gitignore if it doesn't exist
+    [ ! -f "$IGNORE_FILE" ] && touch "$IGNORE_FILE"
+
+    # Define all desired ignore patterns
+    patterns=(
+        "/.composer"
+        "/.npm"
+        "/.ash_history"
+        "/.phpunit.cache"
+        "/bootstrap/ssr"
+        "/node_modules"
+        "/public/build"
+        "/public/hot"
+        "/public/storage"
+        "/storage/*.key"
+        "/vendor"
+        ".env"
+        ".env.backup"
+        ".env.production"
+        ".phpunit.result.cache"
+        "Homestead.json"
+        "Homestead.yaml"
+        "auth.json"
+        "npm-debug.log"
+        "yarn-error.log"
+        "/.fleet"
+        "/.idea"
+        "/.vscode"
+    )
+
+    # Append each pattern if it's not already in .gitignore
+    for pattern in "${patterns[@]}"; do
+        if ! grep -qxF "$pattern" "$IGNORE_FILE"; then
+            echo "$pattern" >> "$IGNORE_FILE"
+            printf "${GREEN}✅ Added ${WHITE}$pattern${GREEN} to .gitignore${NC}\n"
+        fi
+    done
+}
+
 function_configure_logging() {
 	echo ""
     printf "${WHITE}📄 Configuring log settings in '$FILE_LOGGING'...${NC}\n"
@@ -470,6 +514,7 @@ function_ua_template() {
 	fi
 }
 
+
 # --------------------------------------
 # 🚀 Main Execution
 # --------------------------------------
@@ -499,6 +544,7 @@ if [ ! -d app ]; then
 	function_configure_vite
     function_create_readme
 	function_ua_template
+    function_configure_gitignore
 
     echo ""
     printf "\n${GREEN}✅ Laravel scaffolding complete.${NC}\n"
@@ -507,6 +553,7 @@ else
     [ ! -d vendor ] && function_install_composer
     function_configure_database
     function_configure_vite
+    function_configure_gitignore
 
     printf "\n${GREEN}✅ Laravel application already exists.${NC}\n"
 fi
