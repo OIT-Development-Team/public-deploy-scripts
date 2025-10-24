@@ -135,7 +135,10 @@ function_configure_gitignore() {
     IGNORE_FILE=".gitignore"
 
     # Create .gitignore if it doesn't exist
-    [ ! -f "$IGNORE_FILE" ] && touch "$IGNORE_FILE"
+    if [ ! -f "$IGNORE_FILE" ]; then
+        touch "$IGNORE_FILE"
+        printf "${GREEN}✅ ${WHITE}Created .gitignore file.${NC}\n"
+    fi
 
     # Define all desired ignore patterns
     patterns=(
