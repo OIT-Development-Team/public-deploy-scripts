@@ -45,7 +45,7 @@ fi
 # --------------------------------------
 curl -X POST -d @deploy-plan.json \
      -H "Content-Type: application/json" -H "AUTH: $AUTH" \
-     https://build-dockerfile-api.oitapps.ua.edu/api/docker/build-dev > Dockerfile.dev
+     https://build-dockerfile-api.oitapps-test.ua.edu/api/docker/build-dev > Dockerfile.dev
 
 # --------------------------------------
 # 🐳 Rebuild Container
