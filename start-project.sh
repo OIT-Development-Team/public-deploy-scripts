@@ -62,22 +62,10 @@ fi
 # --------------------------------------
 # 🚀 Run Laravel provisioning inside container
 # --------------------------------------
-VITE_NEEDS_UPDATE=false
-if [ -f vite.config.js ]; then
-    if ! grep -q "host: '0.0.0.0'" vite.config.js || ! grep -q "hmr: {" vite.config.js; then
-        VITE_NEEDS_UPDATE=true
-    fi
-else
-    VITE_NEEDS_UPDATE=true
-fi
-
-# Run provisioning if app/vendor/node_modules is missing OR Vite config needs update
-if [ ! -d app ] || [ ! -d vendor ] || [ ! -d node_modules ] || [ "$VITE_NEEDS_UPDATE" = true ]; then
-    curl -sSL -o laravel-app.sh https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
-    chmod +x laravel-app.sh
-    docker exec -it app ./laravel-app.sh $FORWARD_ARGS
-    rm laravel-app.sh
-fi
+curl -sSL -o laravel-app.sh https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
+chmod +x laravel-app.sh
+docker exec -it app ./laravel-app.sh $FORWARD_ARGS
+rm laravel-app.sh
 
 # --------------------------------------
 # 🔧 Run npm dev server in background
