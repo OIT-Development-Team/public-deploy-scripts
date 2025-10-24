@@ -140,35 +140,35 @@ function_configure_gitignore() {
         printf "${GREEN}✅ ${WHITE}Created .gitignore file.${NC}\n"
     fi
 
-    # Define all desired ignore patterns
-    patterns=(
-        "/.composer"
-        "/.npm"
-        "/.ash_history"
-        "/.phpunit.cache"
-        "/bootstrap/ssr"
-        "/node_modules"
-        "/public/build"
-        "/public/hot"
-        "/public/storage"
-        "/storage/*.key"
-        "/vendor"
-        ".env"
-        ".env.backup"
-        ".env.production"
-        ".phpunit.result.cache"
-        "Homestead.json"
-        "Homestead.yaml"
-        "auth.json"
-        "npm-debug.log"
-        "yarn-error.log"
-        "/.fleet"
-        "/.idea"
-        "/.vscode"
-    )
+    # Define all desired ignore patterns in a here-document
+    cat <<'EOF' | while IFS= read -r pattern; do
+/.composer
+/.npm
+/.ash_history
+/.phpunit.cache
+/bootstrap/ssr
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+EOF
+        # Skip empty lines or comments
+        [ -z "$pattern" ] && continue
 
-    # Append each pattern if it's not already in .gitignore
-    for pattern in "${patterns[@]}"; do
         if ! grep -qxF "$pattern" "$IGNORE_FILE"; then
             echo "$pattern" >> "$IGNORE_FILE"
             printf "${GREEN}✅ Added ${WHITE}$pattern${GREEN} to .gitignore${NC}\n"
