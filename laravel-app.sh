@@ -44,132 +44,6 @@ done
 # --------------------------------------
 # 🔧 Define functions
 # --------------------------------------
-function_tailwind_install() {
-    printf "${GRAY}✨ ${WHITE}Installing Tailwind CSS and configs...${NC}\n"
-
-    # Install Tailwind-related packages and update node_modules
-    npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
-
-    # Create tailwind.config.js if missing
-    if [ ! -f tailwind.config.js ]; then
-        cat > tailwind.config.js <<EOF
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    './resources/**/*.blade.php',
-    './resources/**/*.js',
-    './resources/**/*.vue',
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-EOF
-        printf "Created tailwind.config.js\n"
-    fi
-
-    # Create postcss.config.js if missing
-    if [ ! -f postcss.config.js ]; then
-        cat > postcss.config.js <<EOF
-module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}
-EOF
-        printf "Created postcss.config.js\n"
-    fi
-
-    # Add Tailwind directives to CSS file if missing
-    if [ -f resources/css/app.css ]; then
-        grep -q '@tailwind base;' resources/css/app.css || {
-            echo "@tailwind base;" >> resources/css/app.css
-            echo "@tailwind components;" >> resources/css/app.css
-            echo "@tailwind utilities;" >> resources/css/app.css
-            printf "Added Tailwind directives to resources/css/app.css\n"
-        }
-    fi
-
-    # Add Tailwind directives to SCSS file if missing
-    if [ -f resources/sass/app.scss ]; then
-        grep -q '@tailwind base;' resources/sass/app.scss || {
-            echo "@tailwind base;" >> resources/sass/app.scss
-            echo "@tailwind components;" >> resources/sass/app.scss
-            echo "@tailwind utilities;" >> resources/sass/app.scss
-            printf "Added Tailwind directives to resources/sass/app.scss\n"
-        }
-    fi
-
-    # Add Tailwind plugin to vite.config.js if missing
-    if [ -f "$FILE_VITE" ]; then
-        if ! grep -q 'tailwindcss' "$FILE_VITE"; then
-            # Insert import at the top after other imports
-            sed -i '1i import tailwindcss from "@tailwindcss/vite";' "$FILE_VITE"
-
-            # Add tailwindcss() to plugins array (naive approach)
-            sed -i '/plugins: \[/a \        tailwindcss(),' "$FILE_VITE"
-
-            printf "Added Tailwind plugin to '$FILE_VITE'\n"
-        fi
-    fi
-
-    printf "${GREEN}✅ ${WHITE}Tailwind installed and configured!${NC}\n"
-}
-
-function_tailwind_remove() {
-    printf "${GRAY}🗑️  ${WHITE}Removing Tailwind CSS files and config...${NC}\n"
-
-    # Extract all @tailwindcss packages from package.json in a portable way (no -P)
-    tailwind_pkgs=$(grep -o '"@tailwindcss[^"]*"' package.json 2>/dev/null | tr -d '"')
-    extra_pkgs="tailwindcss postcss autoprefixer"
-    pkgs_to_remove="$tailwind_pkgs $extra_pkgs"
-
-    # Uninstall all identified packages if present
-    for pkg in $pkgs_to_remove; do
-        if grep -q "\"$pkg\"" package.json 2>/dev/null; then
-            npm uninstall "$pkg" 2>/dev/null || true
-        fi
-    done
-
-    # Remove Tailwind/PostCSS config files if they exist
-    [ -f tailwind.config.js ] && rm -f tailwind.config.js
-    [ -f postcss.config.js ] && rm -f postcss.config.js
-
-    # Remove Tailwind directives from CSS/SCSS if files exist
-    if [ -f resources/css/app.css ]; then
-        sed -i '/@tailwind base;/d' resources/css/app.css
-        sed -i '/@tailwind components;/d' resources/css/app.css
-        sed -i '/@tailwind utilities;/d' resources/css/app.css
-        sed -i '/@import.*tailwindcss.*/d' resources/css/app.css
-    fi
-
-    if [ -f resources/sass/app.scss ]; then
-        sed -i '/@tailwind base;/d' resources/sass/app.scss
-        sed -i '/@tailwind components;/d' resources/sass/app.scss
-        sed -i '/@tailwind utilities;/d' resources/sass/app.scss
-        sed -i '/@import.*tailwindcss.*/d' resources/sass/app.scss
-    fi
-
-    # Clean Tailwind plugin lines from vite.config.js if present
-    if [ -f "$FILE_VITE" ]; then
-        if grep -q 'tailwindcss' "$FILE_VITE"; then
-            sed -i '/import.*tailwindcss.*/d' "$FILE_VITE"
-            sed -i '/tailwindcss(),/d' "$FILE_VITE"
-        fi
-    fi
-
-    # Remove any leftover Tailwind node_modules folders
-    rm -rf node_modules/tailwindcss node_modules/@tailwindcss
-
-    # Prune unused packages from node_modules and update package-lock.json
-    npm prune --omit=dev
-    npm install
-
-    printf "${GREEN}✅ ${WHITE}Tailwind removed and dependencies updated.${NC}\n"
-}
-
 function_configure_caching() {
     echo ""
     printf "${PURPLE}🗄️ ${WHITE}Configuring cache driver in '$FILE_CACHING'...${NC}\n"
@@ -253,6 +127,53 @@ function_configure_database() {
 			printf "${GREEN}✅ Database configuration is correct.${NC}\n"
 		fi
     fi
+}
+
+function_configure_gitignore() {
+    echo ""
+    printf "${GRAY}🗂️  ${WHITE}Ensuring .gitignore has standard exclusions...${NC}\n"
+    IGNORE_FILE=".gitignore"
+
+    # Create .gitignore if it doesn't exist
+    if [ ! -f "$IGNORE_FILE" ]; then
+        touch "$IGNORE_FILE"
+        printf "${GREEN}✅ ${WHITE}Created .gitignore file.${NC}\n"
+    fi
+
+    # Define all desired ignore patterns in a here-document
+    cat <<'EOF' | while IFS= read -r pattern; do
+/.composer
+/.npm
+/.ash_history
+/.phpunit.cache
+/bootstrap/ssr
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+EOF
+        # Skip empty lines or comments
+        [ -z "$pattern" ] && continue
+
+        if ! grep -qxF "$pattern" "$IGNORE_FILE"; then
+            echo "$pattern" >> "$IGNORE_FILE"
+            printf "${GREEN}✅ Added ${WHITE}$pattern${GREEN} to .gitignore${NC}\n"
+        fi
+    done
 }
 
 function_configure_logging() {
@@ -440,6 +361,145 @@ EOL
 	printf "${GREEN}✅ README.md created.${NC}\n"
 }
 
+function_tailwind_install() {
+    printf "${GRAY}✨ ${WHITE}Installing Tailwind CSS and configs...${NC}\n"
+
+    # Install Tailwind-related packages and update node_modules
+    npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
+
+    # Create tailwind.config.js if missing
+    if [ ! -f tailwind.config.js ]; then
+        cat > tailwind.config.js <<EOF
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './resources/**/*.blade.php',
+    './resources/**/*.js',
+    './resources/**/*.vue',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+EOF
+        printf "Created tailwind.config.js\n"
+    fi
+
+    # Create postcss.config.js if missing
+    if [ ! -f postcss.config.js ]; then
+        cat > postcss.config.js <<EOF
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+EOF
+        printf "Created postcss.config.js\n"
+    fi
+
+    # Add Tailwind directives to CSS file if missing
+    if [ -f resources/css/app.css ]; then
+        grep -q '@tailwind base;' resources/css/app.css || {
+            echo "@tailwind base;" >> resources/css/app.css
+            echo "@tailwind components;" >> resources/css/app.css
+            echo "@tailwind utilities;" >> resources/css/app.css
+            printf "Added Tailwind directives to resources/css/app.css\n"
+        }
+    fi
+
+    # Add Tailwind directives to SCSS file if missing
+    if [ -f resources/sass/app.scss ]; then
+        grep -q '@tailwind base;' resources/sass/app.scss || {
+            echo "@tailwind base;" >> resources/sass/app.scss
+            echo "@tailwind components;" >> resources/sass/app.scss
+            echo "@tailwind utilities;" >> resources/sass/app.scss
+            printf "Added Tailwind directives to resources/sass/app.scss\n"
+        }
+    fi
+
+    # Add Tailwind plugin to vite.config.js if missing
+    if [ -f "$FILE_VITE" ]; then
+        if ! grep -q 'tailwindcss' "$FILE_VITE"; then
+            # Insert import at the top after other imports
+            sed -i '1i import tailwindcss from "@tailwindcss/vite";' "$FILE_VITE"
+
+            # Add tailwindcss() to plugins array (naive approach)
+            sed -i '/plugins: \[/a \        tailwindcss(),' "$FILE_VITE"
+
+            printf "Added Tailwind plugin to '$FILE_VITE'\n"
+        fi
+    fi
+
+    printf "${GREEN}✅ ${WHITE}Tailwind installed and configured!${NC}\n"
+}
+
+function_install_composer() {
+    printf "${ORANGE}📦 ${WHITE}Running composer install...${NC}\n"
+    composer install --no-interaction --prefer-dist || true
+    printf "${GREEN}✅ Composer dependencies installed.${NC}\n"
+}
+
+function_install_npm() {
+    printf "${ORANGE}📦 ${WHITE}Running npm install...${NC}\n"
+    npm install || true
+    npm audit fix || true
+    printf "${GREEN}✅ NPM dependencies installed.${NC}\n"
+}
+
+function_tailwind_remove() {
+    printf "${GRAY}🗑️  ${WHITE}Removing Tailwind CSS files and config...${NC}\n"
+
+    # Extract all @tailwindcss packages from package.json in a portable way (no -P)
+    tailwind_pkgs=$(grep -o '"@tailwindcss[^"]*"' package.json 2>/dev/null | tr -d '"')
+    extra_pkgs="tailwindcss postcss autoprefixer"
+    pkgs_to_remove="$tailwind_pkgs $extra_pkgs"
+
+    # Uninstall all identified packages if present
+    for pkg in $pkgs_to_remove; do
+        if grep -q "\"$pkg\"" package.json 2>/dev/null; then
+            npm uninstall "$pkg" 2>/dev/null || true
+        fi
+    done
+
+    # Remove Tailwind/PostCSS config files if they exist
+    [ -f tailwind.config.js ] && rm -f tailwind.config.js
+    [ -f postcss.config.js ] && rm -f postcss.config.js
+
+    # Remove Tailwind directives from CSS/SCSS if files exist
+    if [ -f resources/css/app.css ]; then
+        sed -i '/@tailwind base;/d' resources/css/app.css
+        sed -i '/@tailwind components;/d' resources/css/app.css
+        sed -i '/@tailwind utilities;/d' resources/css/app.css
+        sed -i '/@import.*tailwindcss.*/d' resources/css/app.css
+    fi
+
+    if [ -f resources/sass/app.scss ]; then
+        sed -i '/@tailwind base;/d' resources/sass/app.scss
+        sed -i '/@tailwind components;/d' resources/sass/app.scss
+        sed -i '/@tailwind utilities;/d' resources/sass/app.scss
+        sed -i '/@import.*tailwindcss.*/d' resources/sass/app.scss
+    fi
+
+    # Clean Tailwind plugin lines from vite.config.js if present
+    if [ -f "$FILE_VITE" ]; then
+        if grep -q 'tailwindcss' "$FILE_VITE"; then
+            sed -i '/import.*tailwindcss.*/d' "$FILE_VITE"
+            sed -i '/tailwindcss(),/d' "$FILE_VITE"
+        fi
+    fi
+
+    # Remove any leftover Tailwind node_modules folders
+    rm -rf node_modules/tailwindcss node_modules/@tailwindcss
+
+    # Prune unused packages from node_modules and update package-lock.json
+    npm prune --omit=dev
+    npm install
+
+    printf "${GREEN}✅ ${WHITE}Tailwind removed and dependencies updated.${NC}\n"
+}
+
 function_ua_template() {
 	if [ "$UA_TEMPLATE" = true ]; then
     	echo ""
@@ -456,6 +516,7 @@ function_ua_template() {
 		printf "${GREEN}✅ UA templates added.${NC}\n"
 	fi
 }
+
 
 # --------------------------------------
 # 🚀 Main Execution
@@ -486,11 +547,16 @@ if [ ! -d app ]; then
 	function_configure_vite
     function_create_readme
 	function_ua_template
+    function_configure_gitignore
 
     echo ""
     printf "\n${GREEN}✅ Laravel scaffolding complete.${NC}\n"
 else
+    [ ! -d node_modules ] && function_install_npm
+    [ ! -d vendor ] && function_install_composer
     function_configure_database
+    function_configure_vite
+    function_configure_gitignore
 
     printf "\n${GREEN}✅ Laravel application already exists.${NC}\n"
 fi
