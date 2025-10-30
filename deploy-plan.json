@@ -5,8 +5,8 @@
 		"npm_run_command": "npm run build"
 	},
 	"image": {
-		"name": "php-alpine",
-		"tag": "8.4",
+		"name": "php",
+		"tag": "8.4-latest-slim",
 		"databases": [],
 		"os_modules": [],
 		"php_extensions": [],
