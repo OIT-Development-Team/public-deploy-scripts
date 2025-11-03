@@ -10,11 +10,9 @@ permissions:
 
 jobs:
   build:
-<<<<<<< HEAD
+    # TEST: uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@test
+    # STABLE: uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
     uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
-=======
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@test
->>>>>>> test
     with:
       repository: ${{ github.repository }}
       branch: ${{ github.base_ref || github.ref_name }}
