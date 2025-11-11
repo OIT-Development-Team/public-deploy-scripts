@@ -231,12 +231,12 @@ function_configure_session() {
 function_configure_tailwind() {
 	if [ "$TAILWIND" = false ]; then
 		if grep -q '"tailwindcss"' package.json || [ -d node_modules/tailwindcss ]; then
-        	function_tailwind_remove
+        	function_remove_tailwind
 		fi
 	else
 	    if ! grep -q '"tailwindcss"' package.json && [ ! -d node_modules/tailwindcss ]; then
 	        # Tailwind is NOT installed, so install it manually
-	        function_tailwind_install
+	        function_install_tailwind
 	    fi
 	fi
 }
@@ -361,7 +361,56 @@ EOL
 	printf "${GREEN}✅ README.md created.${NC}\n"
 }
 
-function_tailwind_install() {
+function_install_browser_testing() {
+    echo ""
+    printf "${ORANGE}🧪 ${WHITE}Checking browser testing dependencies...${NC}\n"
+
+    # Check if Pest browser plugin is installed
+    if grep -q 'pestphp/pest-plugin-browser' composer.json 2>/dev/null; then
+        pest_installed=true
+    else
+        pest_installed=false
+    fi
+
+    # Check if Playwright is installed in package.json
+    if grep -q 'playwright' package.json 2>/dev/null; then
+        playwright_installed=true
+    else
+        playwright_installed=false
+    fi
+
+    # Install Pest browser plugin if not present
+    if [ "$pest_installed" = false ]; then
+        composer require pestphp/pest-plugin-browser --dev
+    else
+        printf "${GREEN}✅ Pest browser plugin already installed.${NC}\n"
+    fi
+
+    # Install Playwright if not present
+    if [ "$playwright_installed" = false ]; then
+        npm install playwright@latest
+        npx playwright install
+    else
+        printf "${GREEN}✅ Playwright already installed.${NC}\n"
+    fi
+
+    printf "${GREEN}✅ Browser testing setup complete.${NC}\n"
+}
+
+function_install_composer() {
+    printf "${ORANGE}📦 ${WHITE}Running composer install...${NC}\n"
+    composer install --no-interaction --prefer-dist || true
+    printf "${GREEN}✅ Composer dependencies installed.${NC}\n"
+}
+
+function_install_npm() {
+    printf "${ORANGE}📦 ${WHITE}Running npm install...${NC}\n"
+    npm install || true
+    npm audit fix || true
+    printf "${GREEN}✅ NPM dependencies installed.${NC}\n"
+}
+
+function_install_tailwind() {
     printf "${GRAY}✨ ${WHITE}Installing Tailwind CSS and configs...${NC}\n"
 
     # Install Tailwind-related packages and update node_modules
@@ -435,20 +484,7 @@ EOF
     printf "${GREEN}✅ ${WHITE}Tailwind installed and configured!${NC}\n"
 }
 
-function_install_composer() {
-    printf "${ORANGE}📦 ${WHITE}Running composer install...${NC}\n"
-    composer install --no-interaction --prefer-dist || true
-    printf "${GREEN}✅ Composer dependencies installed.${NC}\n"
-}
-
-function_install_npm() {
-    printf "${ORANGE}📦 ${WHITE}Running npm install...${NC}\n"
-    npm install || true
-    npm audit fix || true
-    printf "${GREEN}✅ NPM dependencies installed.${NC}\n"
-}
-
-function_tailwind_remove() {
+function_remove_tailwind() {
     printf "${GRAY}🗑️  ${WHITE}Removing Tailwind CSS files and config...${NC}\n"
 
     # Extract all @tailwindcss packages from package.json in a portable way (no -P)
@@ -517,7 +553,6 @@ function_ua_template() {
 	fi
 }
 
-
 # --------------------------------------
 # 🚀 Main Execution
 # --------------------------------------
@@ -548,6 +583,7 @@ if [ ! -d app ]; then
     function_create_readme
 	function_ua_template
     function_configure_gitignore
+    function_install_browser_testing
 
     echo ""
     printf "\n${GREEN}✅ Laravel scaffolding complete.${NC}\n"
@@ -557,6 +593,7 @@ else
     function_configure_database
     function_configure_vite
     function_configure_gitignore
+    function_install_browser_testing
 
     printf "\n${GREEN}✅ Laravel application already exists.${NC}\n"
 fi
