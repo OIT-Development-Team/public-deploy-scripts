@@ -394,6 +394,18 @@ function_install_browser_testing() {
         printf "${GREEN}✅ Playwright already installed.${NC}\n"
     fi
 
+    # Ensure tests/Browser/ExampleTest.php exists with example Pest test
+    mkdir -p tests/Browser
+    cat > tests/Browser/ExampleTest.php <<'EOL'
+<?php
+// Example browser test for Pest
+
+test('example', function () {
+    $page = visit('/');
+    $page->assertSee('Laravel');
+});
+EOL
+
     printf "${GREEN}✅ Browser testing setup complete.${NC}\n"
 }
 
