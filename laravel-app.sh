@@ -575,27 +575,29 @@ if [ ! -d app ]; then
     composer require laravel/installer
     vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
 
-	printf "${ORANGE}📦 ${WHITE}Moving project files...${NC}\n"
-	# This method of moving the application should avoid any file limit issues
-	rm -rf vendor composer*
+    # Run browser testing setup inside $TEMP_DIR before moving files
+    (cd "$TEMP_DIR" && function_install_browser_testing)
+
+    printf "${ORANGE}📦 ${WHITE}Moving project files...${NC}\n"
+    # This method of moving the application should avoid any file limit issues
+    rm -rf vendor composer*
     mv "$TEMP_DIR"/vendor ./
-	rm -rf "$TEMP_DIR"/.git*
+    rm -rf "$TEMP_DIR"/.git*
     find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -exec mv -t . {} +
     rm -rf "$TEMP_DIR"
-	printf "\n${GREEN}✅ Project moved!${NC}\n"
+    printf "\n${GREEN}✅ Project moved!${NC}\n"
 
-	npm audit fix
-	function_configure_caching
-	function_configure_database
-	function_configure_logging
-	function_configure_proxies
-	function_configure_session
-	function_configure_tailwind
-	function_configure_vite
+    npm audit fix
+    function_configure_caching
+    function_configure_database
+    function_configure_logging
+    function_configure_proxies
+    function_configure_session
+    function_configure_tailwind
+    function_configure_vite
     function_create_readme
-	function_ua_template
+    function_ua_template
     function_configure_gitignore
-    function_install_browser_testing
 
     echo ""
     printf "\n${GREEN}✅ Laravel scaffolding complete.${NC}\n"
@@ -605,7 +607,6 @@ else
     function_configure_database
     function_configure_vite
     function_configure_gitignore
-    function_install_browser_testing
 
     printf "\n${GREEN}✅ Laravel application already exists.${NC}\n"
 fi
