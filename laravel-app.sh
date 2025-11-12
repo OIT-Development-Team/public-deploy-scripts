@@ -395,6 +395,8 @@ function_install_browser_testing() {
     fi
 
     # Ensure tests/Browser/ExampleTest.php exists with example Pest test
+    printf "${GREEN}✅ Adding example Pest browser test to ${WHITE}tests/Browser/ExampleTest.php${NC}\n"
+    printf "${GRAY}   Run it with: ${WHITE}php artisan test --browser${NC}\n"
     mkdir -p tests/Browser
     cat > tests/Browser/ExampleTest.php <<'EOL'
 <?php
@@ -405,6 +407,14 @@ test('example', function () {
     $page->assertSee('Laravel');
 });
 EOL
+
+    # Add screenshots directory to .gitignore if not present
+    if [ -f .gitignore ]; then
+        if ! grep -q "tests/Browser/Screenshots" .gitignore; then
+            echo "tests/Browser/Screenshots" >> .gitignore
+            printf "${GREEN}✅ Added tests/Browser/Screenshots to .gitignore${NC}\n"
+        fi
+    fi
 
     printf "${GREEN}✅ Browser testing setup complete.${NC}\n"
 }
