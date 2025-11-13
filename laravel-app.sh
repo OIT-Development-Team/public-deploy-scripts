@@ -577,17 +577,83 @@ EOL
     # Create symlink to system Chromium (critical for Alpine compatibility)
     function_setup_chromium_symlink
 
-    # Add post-update-cmd to composer.json to automatically recreate symlink after composer update
+    # Create and apply Playwright timeout fix script
+    printf "${GRAY}   Creating Playwright timeout fix script...${NC}\n"
+    if [ ! -f fix-playwright-timeout.php ]; then
+        cat > fix-playwright-timeout.php <<'EOL'
+#!/usr/bin/env php
+<?php
+
+/**
+ * Fix Playwright server timeout issue in Pest browser plugin.
+ * This script increases the stop timeout from 0.1 to 5.0 seconds
+ * and adds a force-kill fallback to prevent hanging processes.
+ */
+
+$file = __DIR__ . '/vendor/pestphp/pest-plugin-browser/src/Playwright/Servers/PlaywrightNpmServer.php';
+
+if (!file_exists($file)) {
+    exit(0); // Silently skip if file doesn't exist
+}
+
+$content = file_get_contents($file);
+
+// Check if fix is already applied
+if (strpos($content, 'timeout: 5.0') !== false && strpos($content, '// Force kill if still running after timeout') !== false) {
+    exit(0); // Already fixed
+}
+
+// Simple replacement: change timeout from 0.1 to 5.0 and add force-kill logic
+$content = preg_replace(
+    '/(\s+)(\$this->systemProcess->stop\(\s+timeout: )0\.1(,\s+signal: PHP_OS_FAMILY === \'Windows\' \? null : SIGTERM,\s+\);\s+)(\}\s+\$this->systemProcess = null;)/s',
+    '$1$2' . '5.0' . '$3' . '$1            ' . "\n" .
+    '$1            // Force kill if still running after timeout' . "\n" .
+    '$1            if ($this->isRunning()) {' . "\n" .
+    '$1                $this->systemProcess->stop(' . "\n" .
+    '$1                    timeout: 0.1,' . "\n" .
+    '$1                    signal: PHP_OS_FAMILY === \'Windows\' ? null : SIGKILL,' . "\n" .
+    '$1                );' . "\n" .
+    '$1            }' . "\n" .
+    '$4',
+    $content
+);
+
+file_put_contents($file, $content);
+EOL
+        chmod +x fix-playwright-timeout.php
+        printf "${GREEN}✅ Created fix-playwright-timeout.php${NC}\n"
+    else
+        printf "${GREEN}✅ fix-playwright-timeout.php already exists${NC}\n"
+    fi
+
+    # Apply the timeout fix immediately
+    printf "${GRAY}   Applying Playwright timeout fix...${NC}\n"
+    php fix-playwright-timeout.php 2>/dev/null && {
+        printf "${GREEN}✅ Applied Playwright timeout fix${NC}\n"
+    } || {
+        printf "${GRAY}   (Fix will be applied after composer install)${NC}\n"
+    }
+
+    # Add post-update-cmd to composer.json to automatically recreate symlink and apply timeout fix after composer update
     if [ -f composer.json ]; then
         printf "${GRAY}   Configuring composer.json post-update-cmd...${NC}\n"
         
         # Check if post-update-cmd already exists
         if grep -q '"post-update-cmd"' composer.json; then
-            # Check if our symlink fix is already in the post-update-cmd
+            # Check if our fixes are already in the post-update-cmd
+            has_symlink_fix=false
+            has_timeout_fix=false
             if grep -q 'function_setup_chromium_symlink' composer.json; then
+                has_symlink_fix=true
+            fi
+            if grep -q 'fix-playwright-timeout.php' composer.json; then
+                has_timeout_fix=true
+            fi
+
+            if [ "$has_symlink_fix" = true ] && [ "$has_timeout_fix" = true ]; then
                 printf "${GREEN}✅ post-update-cmd already configured for browser testing${NC}\n"
             else
-                # Add our command to existing post-update-cmd array
+                # Add our commands to existing post-update-cmd array
                 # Use PHP to safely modify JSON
                 php -r "
                 \$json = json_decode(file_get_contents('composer.json'), true);
@@ -597,14 +663,21 @@ EOL
                 if (!is_array(\$json['scripts']['post-update-cmd'])) {
                     \$json['scripts']['post-update-cmd'] = [\$json['scripts']['post-update-cmd']];
                 }
-                \$cmd = 'bash -c \"if [ -f laravel-app.sh ]; then source laravel-app.sh && function_setup_chromium_symlink; fi\"';
-                if (!in_array(\$cmd, \$json['scripts']['post-update-cmd'])) {
-                    \$json['scripts']['post-update-cmd'][] = \$cmd;
-                    file_put_contents('composer.json', json_encode(\$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
-                    echo 'Added symlink fix to post-update-cmd';
+                
+                \$symlink_cmd = 'bash -c \"if [ -f laravel-app.sh ]; then source laravel-app.sh && function_setup_chromium_symlink; fi\"';
+                \$timeout_cmd = '@php fix-playwright-timeout.php';
+                
+                if (!in_array(\$symlink_cmd, \$json['scripts']['post-update-cmd'])) {
+                    \$json['scripts']['post-update-cmd'][] = \$symlink_cmd;
                 }
+                if (!in_array(\$timeout_cmd, \$json['scripts']['post-update-cmd'])) {
+                    \$json['scripts']['post-update-cmd'][] = \$timeout_cmd;
+                }
+                
+                file_put_contents('composer.json', json_encode(\$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+                echo 'Updated post-update-cmd';
                 " 2>/dev/null && {
-                    printf "${GREEN}✅ Added symlink fix to existing post-update-cmd${NC}\n"
+                    printf "${GREEN}✅ Added browser testing fixes to existing post-update-cmd${NC}\n"
                 } || {
                     printf "${YELLOW}⚠️  Could not automatically add to post-update-cmd (may need manual configuration)${NC}\n"
                 }
@@ -618,7 +691,8 @@ EOL
             }
             \$json['scripts']['post-update-cmd'] = [
                 '@php artisan config:clear --ansi',
-                'bash -c \"if [ -f laravel-app.sh ]; then source laravel-app.sh && function_setup_chromium_symlink; fi\"'
+                'bash -c \"if [ -f laravel-app.sh ]; then source laravel-app.sh && function_setup_chromium_symlink; fi\"',
+                '@php fix-playwright-timeout.php'
             ];
             file_put_contents('composer.json', json_encode(\$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
             " 2>/dev/null && {
@@ -629,18 +703,10 @@ EOL
         fi
     fi
 
-    # Note about vendor file modifications
-    printf "\n${YELLOW}⚠️  Note: Vendor file modifications are optional for full functionality${NC}\n"
-    printf "${GRAY}   The symlink setup above should be sufficient, but for additional configuration${NC}\n"
-    printf "${GRAY}   you may need to modify these vendor files (changes lost on 'composer update'):${NC}\n"
-    printf "${GRAY}   - vendor/pestphp/pest-plugin-browser/src/Playwright/Servers/PlaywrightNpmServer.php${NC}\n"
-    printf "${GRAY}   - vendor/pestphp/pest-plugin-browser/src/Playwright/Client.php${NC}\n"
-    printf "${GRAY}   - vendor/pestphp/pest-plugin-browser/src/Playwright/BrowserFactory.php${NC}\n"
-
     printf "\n${GREEN}✅ Browser testing setup complete!${NC}\n"
     printf "${GRAY}   Run tests with: ${WHITE}php artisan test${NC}\n"
     printf "${GRAY}   Or browser tests only: ${WHITE}php artisan test --testsuite=Browser${NC}\n"
-    printf "${GRAY}   Symlink will be automatically recreated after 'composer update'${NC}\n"
+    printf "${GRAY}   Symlink and timeout fix will be automatically reapplied after 'composer update'${NC}\n"
 }
 
 function_install_composer() {
