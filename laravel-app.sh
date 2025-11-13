@@ -603,20 +603,75 @@ if (strpos($content, 'timeout: 5.0') !== false && strpos($content, '// Force kil
     exit(0); // Already fixed
 }
 
-// Simple replacement: change timeout from 0.1 to 5.0 and add force-kill logic
-$content = preg_replace(
-    '/(\s+)(\$this->systemProcess->stop\(\s+timeout: )0\.1(,\s+signal: PHP_OS_FAMILY === \'Windows\' \? null : SIGTERM,\s+\);\s+)(\}\s+\$this->systemProcess = null;)/s',
-    '$1$2' . '5.0' . '$3' . '$1            ' . "\n" .
-    '$1            // Force kill if still running after timeout' . "\n" .
-    '$1            if ($this->isRunning()) {' . "\n" .
-    '$1                $this->systemProcess->stop(' . "\n" .
-    '$1                    timeout: 0.1,' . "\n" .
-    '$1                    signal: PHP_OS_FAMILY === \'Windows\' ? null : SIGKILL,' . "\n" .
-    '$1                );' . "\n" .
-    '$1            }' . "\n" .
-    '$4',
-    $content
-);
+// First, fix any broken replacements (like ".0," instead of "timeout: 5.0,")
+if (preg_match('/\s+\.0,\s+signal: PHP_OS_FAMILY/', $content)) {
+    // Restore broken file to original state
+    $content = preg_replace(
+        '/\s+\.0,\s+signal: PHP_OS_FAMILY === \'Windows\' \? null : SIGTERM,\s+\);/',
+        '            $this->systemProcess->stop(
+                timeout: 0.1,
+                signal: PHP_OS_FAMILY === \'Windows\' ? null : SIGTERM,
+            );',
+        $content
+    );
+    // Remove any broken force-kill code that was incorrectly added
+    $content = preg_replace('/\s+// Force kill if still running after timeout.*?\}\s*\}/s', '', $content);
+}
+
+// Now do the proper replacement using a simpler, more reliable approach
+// Find the exact pattern we need to replace
+$oldCode = '            $this->systemProcess->stop(
+                timeout: 0.1,
+                signal: PHP_OS_FAMILY === \'Windows\' ? null : SIGTERM,
+            );
+        }
+
+        $this->systemProcess = null;';
+
+$newCode = '            $this->systemProcess->stop(
+                timeout: 5.0,
+                signal: PHP_OS_FAMILY === \'Windows\' ? null : SIGTERM,
+            );
+            
+            // Force kill if still running after timeout
+            if ($this->isRunning()) {
+                $this->systemProcess->stop(
+                    timeout: 0.1,
+                    signal: PHP_OS_FAMILY === \'Windows\' ? null : SIGKILL,
+                );
+            }
+        }
+
+        $this->systemProcess = null;';
+
+if (strpos($content, $oldCode) !== false) {
+    $content = str_replace($oldCode, $newCode, $content);
+} else {
+    // Fallback: try with flexible whitespace matching
+    $content = preg_replace(
+        '/\$this->systemProcess->stop\(\s+timeout: 0\.1,/',
+        '$this->systemProcess->stop(
+                timeout: 5.0,',
+        $content
+    );
+    
+    // Add force-kill after the stop() call
+    $content = preg_replace(
+        '/(\$this->systemProcess->stop\(\s+timeout: 5\.0,\s+signal: PHP_OS_FAMILY === \'Windows\' \? null : SIGTERM,\s+\);\s+)(\}\s+\$this->systemProcess = null;)/s',
+        '$1            
+            // Force kill if still running after timeout
+            if ($this->isRunning()) {
+                $this->systemProcess->stop(
+                    timeout: 0.1,
+                    signal: PHP_OS_FAMILY === \'Windows\' ? null : SIGKILL,
+                );
+            }
+        }
+
+        $2',
+        $content
+    );
+}
 
 file_put_contents($file, $content);
 EOL
