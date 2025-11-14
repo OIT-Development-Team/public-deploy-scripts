@@ -198,6 +198,10 @@ function_configure_gitignore() {
         # Skip empty lines or comments
         [ -z "$pattern" ] && continue
 
+        # Trim leading and trailing whitespace from pattern
+        pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        [ -z "$pattern" ] && continue
+
         if ! grep -qxF "$pattern" "$IGNORE_FILE"; then
             echo "$pattern" >> "$IGNORE_FILE"
             printf "${GREEN}✅ Added ${WHITE}$pattern${GREEN} to .gitignore${NC}\n"
