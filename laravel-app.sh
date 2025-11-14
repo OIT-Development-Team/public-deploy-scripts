@@ -163,6 +163,7 @@ function_configure_gitignore() {
 
     # Define all desired ignore patterns in a here-document
     cat <<-'EOF' | while IFS= read -r pattern; do
+        *.log
         .DS_Store
         /.ash_history
         /.composer
