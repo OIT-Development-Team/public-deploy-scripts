@@ -166,6 +166,7 @@ function_configure_gitignore() {
         *.log
         .DS_Store
         /.ash_history
+        /.cache
         /.composer
         /.fleet
         /.idea
