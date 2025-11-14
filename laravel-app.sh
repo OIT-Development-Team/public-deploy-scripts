@@ -163,29 +163,36 @@ function_configure_gitignore() {
 
     # Define all desired ignore patterns in a here-document
     cat <<-'EOF' | while IFS= read -r pattern; do
-		/.composer
-		/.npm
-		/.ash_history
-		/.phpunit.cache
-		/bootstrap/ssr
-		/node_modules
-		/public/build
-		/public/hot
-		/public/storage
-		/storage/*.key
-		/vendor
-		.env
-		.env.backup
-		.env.production
-		.phpunit.result.cache
-		Homestead.json
-		Homestead.yaml
-		auth.json
-		npm-debug.log
-		yarn-error.log
-		/.fleet
-		/.idea
-		/.vscode
+        .DS_Store
+        /.ash_history
+        /.composer
+        /.fleet
+        /.idea
+        /.npm
+        /.nova
+        /.phpunit.cache
+        /.vscode
+        /.zed
+        /auth.json
+        /bootstrap/ssr
+        /env
+        .env
+        .env.backup
+        .env.production
+        /phpactor.json
+        /phpunit.result.cache
+        /node_modules
+        npm-debug.log
+        /public/build
+        /public/hot
+        /public/storage
+        /storage/*.key
+        /storage/pail
+        /vendor
+        Homestead.json
+        Homestead.yaml
+        Thumbs.db
+        yarn-error.log
 		EOF
         # Skip empty lines or comments
         [ -z "$pattern" ] && continue
