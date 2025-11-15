@@ -175,25 +175,35 @@ function_configure_gitignore() {
         /.phpunit.cache
         /.vscode
         /.zed
-        /auth.json
+        /bootstrap/cache/*
         /bootstrap/ssr
+        /database/*.sqlite
+        /database/*.sqlite-journal
         /env
-        .env
-        .env.backup
-        .env.production
-        /phpactor.json
-        /phpunit.result.cache
+        /auth.json
+        fix-playwright-timeout.php
+        Homestead.json
+        Homestead.yaml
         /node_modules
         npm-debug.log
+        /phpactor.json
+        /phpunit.result.cache
         /public/build
         /public/hot
         /public/storage
         /storage/*.key
+        /storage/framework/cache/*
+        /storage/framework/sessions/*
+        /storage/framework/views/*
+        /storage/logs/*
         /storage/pail
-        /vendor
-        Homestead.json
-        Homestead.yaml
+        /tests/Browser/Screenshots
         Thumbs.db
+        /vendor
+        .env
+        .env.backup
+        .env.production
+        .phpunit.result.cache
         yarn-error.log
 		EOF
         # Skip empty lines or comments
