@@ -718,65 +718,57 @@ pest()->extend(Tests\\\\TestCase::class)\\
         printf "${GRAY}   (Fix will be applied after composer install)${NC}\n"
     }
 
-    # Add post-update-cmd to composer.json to automatically recreate symlink and apply timeout fix after composer update
-    if [ -f composer.json ]; then
-        printf "${GRAY}   Configuring composer.json post-update-cmd...${NC}\n"
-        
+    # Add post-update-cmd to composer.local.json to automatically recreate symlink and apply timeout fix after composer update
+    printf "${GRAY}   Configuring composer.local.json post-update-cmd...${NC}\n"
+    if [ -f composer.local.json ]; then
         # Check if post-update-cmd already exists
-        if grep -q '"post-update-cmd"' composer.json; then
-            # Check if our fixes are already in the post-update-cmd
+        if grep -q '"post-update-cmd"' composer.local.json; then
             has_symlink_fix=false
             has_timeout_fix=false
-            if grep -q 'function_setup_chromium_symlink' composer.json; then
+            if grep -q 'function_setup_chromium_symlink' composer.local.json; then
                 has_symlink_fix=true
             fi
-            if grep -q 'fix-playwright-timeout.php' composer.json; then
+            if grep -q 'fix-playwright-timeout.php' composer.local.json; then
                 has_timeout_fix=true
             fi
 
             if [ "$has_symlink_fix" = true ] && [ "$has_timeout_fix" = true ]; then
-                printf "${GREEN}✅ post-update-cmd already configured for browser testing${NC}\n"
+                printf "${GREEN}✅ post-update-cmd already configured for browser testing in composer.local.json${NC}\n"
             else
-                # Add our commands to existing post-update-cmd array
-                # Use PHP to safely modify JSON
                 php_script=$(mktemp)
                 cat > "$php_script" <<-'PHP_SCRIPT'
 					<?php
-					$json = json_decode(file_get_contents('composer.json'), true);
+					$json = json_decode(file_get_contents('composer.local.json'), true);
 					if (!isset($json['scripts']['post-update-cmd'])) {
 					    $json['scripts']['post-update-cmd'] = [];
 					}
 					if (!is_array($json['scripts']['post-update-cmd'])) {
 					    $json['scripts']['post-update-cmd'] = [$json['scripts']['post-update-cmd']];
 					}
-					
 					$symlink_cmd = 'bash -c "if [ -f laravel-app.sh ]; then source laravel-app.sh && function_setup_chromium_symlink; fi"';
 					$timeout_cmd = '@php fix-playwright-timeout.php';
-					
 					if (!in_array($symlink_cmd, $json['scripts']['post-update-cmd'])) {
 					    $json['scripts']['post-update-cmd'][] = $symlink_cmd;
 					}
 					if (!in_array($timeout_cmd, $json['scripts']['post-update-cmd'])) {
 					    $json['scripts']['post-update-cmd'][] = $timeout_cmd;
 					}
-					
-					file_put_contents('composer.json', json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+					file_put_contents('composer.local.json', json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
 					echo 'Updated post-update-cmd';
 				PHP_SCRIPT
-
+                
                 php "$php_script" 2>/dev/null && {
-                    printf "${GREEN}✅ Added browser testing fixes to existing post-update-cmd${NC}\n"
+                    printf "${GREEN}✅ Added browser testing fixes to existing post-update-cmd in composer.local.json${NC}\n"
                 } || {
                     printf "${YELLOW}⚠️  Could not automatically add to post-update-cmd (may need manual configuration)${NC}\n"
                 }
                 rm -f "$php_script"
             fi
         else
-            # Add new post-update-cmd section
             php_script=$(mktemp)
             cat > "$php_script" <<-'PHP_SCRIPT'
 				<?php
-				$json = json_decode(file_get_contents('composer.json'), true);
+				$json = file_exists('composer.local.json') ? json_decode(file_get_contents('composer.local.json'), true) : [];
 				if (!isset($json['scripts'])) {
 				    $json['scripts'] = [];
 				}
@@ -785,16 +777,35 @@ pest()->extend(Tests\\\\TestCase::class)\\
 				    'bash -c "if [ -f laravel-app.sh ]; then source laravel-app.sh && function_setup_chromium_symlink; fi"',
 				    '@php fix-playwright-timeout.php'
 				];
-				file_put_contents('composer.json', json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+				file_put_contents('composer.local.json', json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
 			PHP_SCRIPT
-
             php "$php_script" 2>/dev/null && {
-                printf "${GREEN}✅ Added post-update-cmd to composer.json${NC}\n"
+                printf "${GREEN}✅ Added post-update-cmd to composer.local.json${NC}\n"
             } || {
                 printf "${YELLOW}⚠️  Could not automatically add post-update-cmd (may need manual configuration)${NC}\n"
             }
             rm -f "$php_script"
         fi
+    else
+        # Create composer.local.json with post-update-cmd
+        php_script=$(mktemp)
+        cat > "$php_script" <<-'PHP_SCRIPT'
+            <?php
+			$json = [];
+			$json['scripts'] = [];
+			$json['scripts']['post-update-cmd'] = [
+				'@php artisan config:clear --ansi',
+				'bash -c "if [ -f laravel-app.sh ]; then source laravel-app.sh && function_setup_chromium_symlink; fi"',
+				'@php fix-playwright-timeout.php'
+            ];
+			file_put_contents('composer.local.json', json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+		PHP_SCRIPT
+        php "$php_script" 2>/dev/null && {
+            printf "${GREEN}✅ Created composer.local.json with post-update-cmd${NC}\n"
+        } || {
+            printf "${YELLOW}⚠️  Could not create composer.local.json (may need manual configuration)${NC}\n"
+        }
+        rm -f "$php_script"
     fi
 
     printf "\n${GREEN}✅ Browser testing setup complete!${NC}\n"
