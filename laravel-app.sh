@@ -165,6 +165,10 @@ function_configure_gitignore() {
     cat <<-'EOF' | while IFS= read -r pattern; do
         *.log
         .DS_Store
+        .env
+        .env.backup
+        .env.production
+        .phpunit.result.cache
         /.ash_history
         /.cache
         /.composer
@@ -175,17 +179,13 @@ function_configure_gitignore() {
         /.phpunit.cache
         /.vscode
         /.zed
+        /auth.json
         /bootstrap/cache/*
         /bootstrap/ssr
         /database/*.sqlite
         /database/*.sqlite-journal
         /env
-        /auth.json
-        fix-playwright-timeout.php
-        Homestead.json
-        Homestead.yaml
         /node_modules
-        npm-debug.log
         /phpactor.json
         /phpunit.result.cache
         /public/build
@@ -198,12 +198,13 @@ function_configure_gitignore() {
         /storage/logs/*
         /storage/pail
         /tests/Browser/Screenshots
-        Thumbs.db
         /vendor
-        .env
-        .env.backup
-        .env.production
-        .phpunit.result.cache
+        composer.local.json
+        fix-playwright-timeout.php
+        Homestead.json
+        Homestead.yaml
+        npm-debug.log
+        Thumbs.db
         yarn-error.log
 		EOF
         # Skip empty lines or comments
