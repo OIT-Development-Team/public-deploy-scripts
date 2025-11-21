@@ -1133,7 +1133,7 @@ else
     function_configure_database
     function_configure_vite
     function_configure_gitignore
-    function_install_browser_testing
+    #function_install_browser_testing
 
     printf "\n${GREEN}✅ Laravel application already exists.${NC}\n"
 fi
