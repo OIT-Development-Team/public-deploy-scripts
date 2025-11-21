@@ -1123,7 +1123,7 @@ if [ ! -d app ]; then
     function_create_readme
     function_ua_template
     function_configure_gitignore
-    function_install_browser_testing
+    #function_install_browser_testing
 
     echo ""
     printf "\n${GREEN}✅ Laravel scaffolding complete.${NC}\n"
