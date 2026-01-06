@@ -2,6 +2,18 @@
 
 set -eu
 
+# Ensure npm has a usable HOME and cache directory inside containers/users without a home dir.
+# This prevents npm ENOENT errors when it tries to create $HOME/.npm (e.g. /home/webuser/.npm).
+if [ -z "${HOME:-}" ]; then
+    export HOME="/tmp"
+fi
+
+# Allow override via NPM_CACHE_DIR environment variable; default to $HOME/.npm.
+NPM_CACHE_DIR="${NPM_CACHE_DIR:-$HOME/.npm}"
+mkdir -p "$NPM_CACHE_DIR" 2>/dev/null || true
+export npm_config_cache="$NPM_CACHE_DIR"
+
+
 # --------------------------------------
 # ⚙️  Configurable Options
 # --------------------------------------
