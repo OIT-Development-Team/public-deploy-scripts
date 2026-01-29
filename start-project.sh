@@ -1,5 +1,6 @@
 #!/bin/sh
 
+ulimit -n 4096
 set -e  # Exit on error
 
 # --------------------------------------
@@ -21,7 +22,7 @@ done
 [ ! -f .github/workflows/build.yaml ] && \
     # TEST: curl -sSL --create-dirs -o .github/workflows/build.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml
     # STABLE: curl -sSL --create-dirs -o .github/workflows/build.yaml  https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
-    curl -sSL --create-dirs -o .github/workflows/build.yaml  https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
+    curl -sSL --create-dirs -o .github/workflows/build.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
 
 [ ! -f .git/hooks/pre-commit ] && \
     # TEST: curl -sSL --create-dirs -o .git/hooks/pre-commit https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit && chmod +x .git/hooks/pre-commit
