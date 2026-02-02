@@ -1,12 +1,12 @@
 {
 	"build": {
-		"php": "8.4",
+		"php": "8.5",
 		"run_npm": "true",
 		"npm_run_command": "npm run build"
 	},
 	"image": {
 		"name": "php",
-		"tag": "8.4-latest-slim",
+		"tag": "8.5-latest-slim",
 		"databases": [],
 		"os_modules": [],
 		"php_extensions": [],
