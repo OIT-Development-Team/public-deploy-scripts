@@ -25,6 +25,10 @@ FILE_LOGGING="config/logging.php"
 FILE_SESSION="config/session.php"
 FILE_VITE_BASE="vite.config"
 LARAVEL_INSTALLER="vendor/laravel/installer/src/NewCommand.php"
+
+# Determine whether we should run npm actions (default: true)
+# Accepts boolean or string values in deploy-plan.json (e.g. "false" or false)
+RUN_NPM=$(php -r "\$d = json_decode(@file_get_contents('deploy-plan.json'), true); if(!isset(\$d['run_npm'])) { echo 'true'; } else { if(\$d['run_npm'] === false || \$d['run_npm'] === 'false') echo 'false'; else echo 'true'; }")
 TAILWIND=true
 TEMP_DIR="./new-app"
 UA_TEMPLATE=false
@@ -364,8 +368,12 @@ EOL
 function_tailwind_install() {
     printf "${GRAY}✨ ${WHITE}Installing Tailwind CSS and configs...${NC}\n"
 
-    # Install Tailwind-related packages and update node_modules
-    npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
+    if [ "$RUN_NPM" = "false" ]; then
+        printf "${YELLOW}⚠️  Skipping Tailwind npm install because run_npm=false in deploy-plan.json${NC}\n"
+    else
+        # Install Tailwind-related packages and update node_modules
+        npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
+    fi
 
     # Create tailwind.config.js if missing
     if [ ! -f tailwind.config.js ]; then
@@ -442,6 +450,11 @@ function_install_composer() {
 }
 
 function_install_npm() {
+    if [ "$RUN_NPM" = "false" ]; then
+        printf "${YELLOW}⚠️  Skipping npm install/audit because run_npm=false in deploy-plan.json${NC}\n"
+        return
+    fi
+
     printf "${ORANGE}📦 ${WHITE}Running npm install...${NC}\n"
     npm install || true
     npm audit fix || true
@@ -459,7 +472,9 @@ function_tailwind_remove() {
     # Uninstall all identified packages if present
     for pkg in $pkgs_to_remove; do
         if grep -q "\"$pkg\"" package.json 2>/dev/null; then
-            npm uninstall "$pkg" 2>/dev/null || true
+            if [ "$RUN_NPM" != "false" ]; then
+                npm uninstall "$pkg" 2>/dev/null || true
+            fi
         fi
     done
 
@@ -494,8 +509,12 @@ function_tailwind_remove() {
     rm -rf node_modules/tailwindcss node_modules/@tailwindcss
 
     # Prune unused packages from node_modules and update package-lock.json
-    npm prune --omit=dev
-    npm install
+    if [ "$RUN_NPM" != "false" ]; then
+        npm prune --omit=dev
+        npm install
+    else
+        printf "${YELLOW}⚠️  Skipping npm prune/install because run_npm=false in deploy-plan.json${NC}\n"
+    fi
 
     printf "${GREEN}✅ ${WHITE}Tailwind removed and dependencies updated.${NC}\n"
 }
@@ -537,7 +556,12 @@ if [ ! -d app ]; then
     rm -rf "$TEMP_DIR"
 	printf "\n${GREEN}✅ Project moved!${NC}\n"
 
-	npm audit fix
+    # Run npm audit fix only when enabled by deploy-plan.json
+    if [ "$RUN_NPM" != "false" ]; then
+        npm audit fix || true
+    else
+        printf "${YELLOW}⚠️  Skipping npm audit fix because run_npm=false in deploy-plan.json${NC}\n"
+    fi
 	function_configure_caching
 	function_configure_database
 	function_configure_logging
@@ -552,7 +576,7 @@ if [ ! -d app ]; then
     echo ""
     printf "\n${GREEN}✅ Laravel scaffolding complete.${NC}\n"
 else
-    [ ! -d node_modules ] && function_install_npm
+    [ "$RUN_NPM" != "false" ] && [ ! -d node_modules ] && function_install_npm
     [ ! -d vendor ] && function_install_composer
     function_configure_database
     function_configure_vite
