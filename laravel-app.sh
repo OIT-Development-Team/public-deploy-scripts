@@ -28,7 +28,7 @@ LARAVEL_INSTALLER="vendor/laravel/installer/src/NewCommand.php"
 
 # Determine whether we should run npm actions (default: true)
 # Accepts boolean or string values in deploy-plan.json (e.g. "false" or false)
-RUN_NPM=$(php -r "\$d = json_decode(@file_get_contents('deploy-plan.json'), true); if(!isset(\$d['run_npm'])) { echo 'true'; } else { if(\$d['run_npm'] === false || \$d['run_npm'] === 'false') echo 'false'; else echo 'true'; }")
+RUN_NPM=$(php -r "\$d = json_decode(@file_get_contents('deploy-plan.json'), true); \$val = \$d['build']['run_npm'] ?? \$d['run_npm'] ?? null; if(\$val === null) { echo 'true'; } else { if(\$val === false || \$val === 'false') echo 'false'; else echo 'true'; }")
 TAILWIND=true
 TEMP_DIR="./new-app"
 UA_TEMPLATE=false
