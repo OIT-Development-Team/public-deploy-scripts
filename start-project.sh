@@ -8,6 +8,7 @@ set -e  # Exit on error
 # --------------------------------------
 FORWARD_ARGS=""
 
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --pv|--no-tailwind|--ua-template) FORWARD_ARGS="$FORWARD_ARGS $1" ;;
@@ -83,8 +84,15 @@ docker exec -it app ./laravel-app.sh $FORWARD_ARGS
 rm laravel-app.sh
 
 # --------------------------------------
-# 🔧 Run npm dev server in background
+# 🔧 Run npm dev server in background (if enabled)
 # --------------------------------------
-echo ""
-echo "Running npm run dev in background..."
-docker exec -d app npm run dev
+RUN_NPM=$(docker exec app php -r "\$d = json_decode(@file_get_contents('deploy-plan.json'), true); \$val = \$d['build']['run_npm'] ?? \$d['run_npm'] ?? null; if(\$val === null) { echo 'true'; } else { if(\$val === false || \$val === 'false') echo 'false'; else echo 'true'; }")
+
+if [ "$RUN_NPM" = "false" ]; then
+    echo ""
+    echo "⚠️  Skipping npm run dev (run_npm=false in deploy-plan.json)"
+else
+    echo ""
+    echo "Running npm run dev in background..."
+    docker exec -d app npm run dev
+fi

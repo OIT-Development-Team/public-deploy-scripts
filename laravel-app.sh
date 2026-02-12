@@ -545,7 +545,11 @@ if [ ! -d app ]; then
     echo ""
     printf "${ORANGE}🚧 ${WHITE}Starting interactive Laravel scaffolding...${NC}\n"
     composer require laravel/installer
-    vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
+    if [ "$RUN_NPM" = "false" ]; then
+        vendor/bin/laravel new --database=sqlite --no-npm "$TEMP_DIR"
+    else
+        vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
+    fi
 
 	printf "${ORANGE}📦 ${WHITE}Moving project files...${NC}\n"
 	# This method of moving the application should avoid any file limit issues
