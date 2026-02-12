@@ -547,7 +547,7 @@ if [ ! -d app ]; then
     printf "${ORANGE}🚧 ${WHITE}Starting interactive Laravel scaffolding...${NC}\n"
     composer require laravel/installer
     if [ "$RUN_NPM" = "false" ]; then
-        vendor/bin/laravel new --database=sqlite --no-npm "$TEMP_DIR"
+        vendor/bin/laravel new --database=sqlite "$TEMP_DIR"
     else
         vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
     fi
