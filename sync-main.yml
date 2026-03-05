@@ -1,0 +1,30 @@
+name: Sync Main with Prod
+
+on:
+  push:
+    branches: [prod]
+
+permissions:
+  contents: write
+
+jobs:
+  sync-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create main branch if it doesn't exist
+        run: |
+          if ! git ls-remote --exit-code --heads origin main; then
+            git checkout -b main
+            git push origin main
+          fi
+
+      - name: Reset main to prod
+        run: |
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/prod
+          git push origin main --force
