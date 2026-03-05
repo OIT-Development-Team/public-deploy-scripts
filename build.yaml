@@ -1,32 +1,15 @@
-<<<<<<< HEAD
-name: Run Laravel Pint and Build PHP
- 
-on:
-  push:
-=======
 name: Build & Deploy Laravel App
 
 on:
   push:
     branches: [test]
     tags: [v*]
->>>>>>> 358594e (added new github actions)
   workflow_dispatch:
  
 permissions:
   contents: write
  
 jobs:
-<<<<<<< HEAD
-  build:
-    # TEST: uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@test
-    # STABLE: uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@test
-    with:
-      repository: ${{ github.repository }}
-      branch: ${{ github.ref_name }}
-    secrets: inherit
-=======
   validate-prod-tag:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
@@ -80,4 +63,3 @@ jobs:
           with:
             tag_name: ${{ github.ref_name }}
             generate_release_notes: true
->>>>>>> 358594e (added new github actions)
