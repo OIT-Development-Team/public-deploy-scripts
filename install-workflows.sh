@@ -9,6 +9,7 @@ FILES=(
   lint.yml
   restart-app.yml
   tests.yml
+  sync-main.yml
 )
 
 echo "Installing shared GitHub workflows..."
