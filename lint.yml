@@ -1,0 +1,14 @@
+name: linter
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  quality:
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/lint.yml@main
+    secrets: inherit
+    with:
+      repository: ${{ github.repository }}
+      branch: ${{ github.ref_name }}

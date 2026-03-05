@@ -1,0 +1,14 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  ci:
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/tests.yml@main
+    secrets: inherit
+    with:
+      repository: ${{ github.repository }}
+      branch: ${{ github.ref_name }}
