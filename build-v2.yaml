@@ -1,0 +1,65 @@
+name: Build & Deploy Laravel App
+
+on:
+  push:
+    branches: [test]
+    tags: [v*]
+  workflow_dispatch:
+ 
+permissions:
+  contents: write
+ 
+jobs:
+  validate-prod-tag:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure tag points to prod HEAD
+        run: |
+          git fetch origin prod
+          PROD_SHA=$(git rev-parse origin/prod)
+          TAG_SHA=$(git rev-list -n 1 $GITHUB_REF)
+
+          if [ "$PROD_SHA" != "$TAG_SHA" ]; then
+            echo "❌ Tag does not point to prod branch HEAD"
+            exit 1
+          fi
+
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid prod tag format"
+            exit 1
+          fi
+
+  build-test:
+    if: github.ref_type == 'branch'
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
+    with:
+      repository: ${{ github.repository }}
+      branch: test
+    secrets: inherit
+
+  build-prod:
+    needs: validate-prod-tag
+    if: github.ref_type == 'tag'
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
+    with:
+      repository: ${{ github.repository }}
+      branch: prod
+    secrets: inherit
+
+
+  release:
+    needs: build-prod
+    if: github.ref_type == 'tag' && success()
+    runs-on: ubuntu-latest
+
+    steps:
+        - name: Create GitHub Release
+          uses: softprops/action-gh-release@v2
+          with:
+            tag_name: ${{ github.ref_name }}
+            generate_release_notes: true

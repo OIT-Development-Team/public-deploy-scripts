@@ -1,0 +1,21 @@
+name: Restart App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment to redeploy
+        required: true
+        default: test
+        type: choice
+        options:
+          - test
+          - prod
+
+jobs:
+  restart-app:
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/restart-app.yml@main
+    secrets: inherit
+    with:
+      repository: ${{ github.event.repository.name }}
+      environment: ${{ inputs.environment }}
