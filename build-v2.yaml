@@ -36,7 +36,7 @@ jobs:
 
   build-test:
     if: github.ref_type == 'branch'
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v2.yml@main
     with:
       repository: ${{ github.repository }}
       branch: test
@@ -45,7 +45,7 @@ jobs:
   build-prod:
     needs: validate-prod-tag
     if: github.ref_type == 'tag'
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app.yml@main
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v2.yml@main
     with:
       repository: ${{ github.repository }}
       branch: prod
