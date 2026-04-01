@@ -1,3 +1,4 @@
+# Modifies the deployment and external secret manifest to force a secret refresh and re-starts the application to pick up the changes.
 name: Restart App
 
 on:
