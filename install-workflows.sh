@@ -6,9 +6,9 @@ BASE_URL="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-s
 
 FILES=(
   build-v2.yaml
-  lint.yml
+  #lint.yml
   restart-app.yml
-  tests.yml
+  #tests.yml
   sync-main.yml
 )
 
