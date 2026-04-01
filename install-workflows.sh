@@ -2,7 +2,7 @@
 set -euo pipefail
 
 WORKFLOW_DIR=".github/workflows"
-BASE_URL="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/heads/test"
+BASE_URL="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/heads/main"
 
 FILES=(
   build-v2.yaml
