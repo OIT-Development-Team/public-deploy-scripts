@@ -55,11 +55,7 @@ jobs:
   release:
     needs: build-prod
     if: github.ref_type == 'tag' && success()
-    runs-on: ubuntu-latest
-
-    steps:
-        - name: Create GitHub Release
-          uses: softprops/action-gh-release@v2
-          with:
-            tag_name: ${{ github.ref_name }}
-            generate_release_notes: true
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/release.yml@main
+    with:
+      repository: ${{ github.repository }}
+    secrets: inherit
