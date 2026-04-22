@@ -19,15 +19,15 @@ done
 # --------------------------------------
 # 📥 Pull supporting files if missing
 # --------------------------------------
-[ ! -f .github/workflows/build.yaml ] && \
+#[ ! -f .github/workflows/build.yaml ] && \
     # TEST: curl -sSL --create-dirs -o .github/workflows/build.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml
     # STABLE: curl -sSL --create-dirs -o .github/workflows/build.yaml  https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
-    curl -sSL --create-dirs -o .github/workflows/build.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
+    #curl -sSL --create-dirs -o .github/workflows/build.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
 
-[ ! -f .git/hooks/pre-commit ] && \
+#[ ! -f .git/hooks/pre-commit ] && \
     # TEST: curl -sSL --create-dirs -o .git/hooks/pre-commit https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit && chmod +x .git/hooks/pre-commit
     # STABLE: curl -sSL --create-dirs -o .git/hooks/pre-commit https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit && chmod +x .git/hooks/pre-commit
-    curl -sSL --create-dirs -o .git/hooks/pre-commit https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit && chmod +x .git/hooks/pre-commit
+    #curl -sSL --create-dirs -o .git/hooks/pre-commit https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit && chmod +x .git/hooks/pre-commit
 
 [ ! -f docker-compose.yaml ] && \
     # TEST: curl -sSL -o docker-compose.yaml https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml
