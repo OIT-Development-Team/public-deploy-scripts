@@ -1,23 +1,64 @@
 #!/bin/sh
 
+# ==============================================
+# laravel-app.sh — Laravel provisioning (runs inside Docker)
+# ==============================================
+# Invoked by start-project.sh via `docker exec`. Use start-project.sh from your project
+# root; this script is not intended to be run directly on the host.
+#
+# USAGE:
+#   ./laravel-app.sh [OPTIONS]
+#
+# OPTIONS:
+#   --no-tailwind     Remove Tailwind from existing projects, or skip it in new projects
+#   --add-tailwind    Add Tailwind to existing projects only (new projects get it from the Laravel installer)
+#   --ua-template     Download University of Alabama UI component templates (works with new and existing projects)
+#
+# Persistent volumes (--pv) are configured by start-project.sh on the host before the
+# container is built; that flag is not handled here.
+#
+# EXAMPLES:
+#   ./laravel-app.sh
+#   ./laravel-app.sh --no-tailwind
+#   ./laravel-app.sh --add-tailwind
+#   ./laravel-app.sh --ua-template
+#
+# BEHAVIOR:
+#   NEW PROJECT (no app/ directory):
+#     - Scaffolds Laravel via the Laravel Installer (Tailwind included by default)
+#     - With --no-tailwind: removes Tailwind after scaffolding
+#     - Applies full configuration: caching, logging, proxies, session, database, Vite, etc.
+#     - Creates README.md template
+#
+#   EXISTING PROJECT (app/ directory exists):
+#     - Installs missing vendor/ or node_modules/ (warns and continues if network fails)
+#     - Updates database, Vite, and .gitignore configs only (no full re-scaffold)
+#     - Does NOT add or remove Tailwind unless --add-tailwind or --no-tailwind is passed
+#     - Does NOT reapply caching/logging/proxy/session (assumes prior setup)
+#
+# Network-dependent steps log a warning and continue when they fail, as long as the
+# required local files already exist.
+
 set -eu
 
 # --------------------------------------
 # ⚙️  Configurable Options
 # --------------------------------------
-# ANSI color definitions
-BLUE='\033[1;34m'			# For 📘 (blue book)
-BRIGHT_BLUE='\033[1;96m'	# For 🌐 (globe)
-GRAY='\033[0;37m'			# For 🗑️ and ⚙️ and 🔧
-GREEN='\033[1;32m'			# Success messages
-ORANGE='\033[38;5;208m'		# For 📦
+# ANSI color codes used for console output formatting
+# These define colors for different message types and visual elements
+BLUE='\033[1;34m'           # For 📘 (blue book)
+BRIGHT_BLUE='\033[1;96m'    # For 🌐 (globe)
+GRAY='\033[0;37m'           # For 🗑️ and ⚙️ and 🔧
+GREEN='\033[1;32m'          # Success messages
+ORANGE='\033[38;5;208m'     # For 📦
 PURPLE='\033[38;5;141m'     # For 🗄️ (data cabinet)
 RED='\033[1;31m'			# For errors
 WHITE='\033[1;37m'			# For main text
 YELLOW='\033[1;33m'			# For ⚠️
 NC='\033[0m'				# Reset color
 
-# Variables
+# Configuration file paths used throughout the script
+# These refer to Laravel configuration files that will be modified
 FILE_APP="bootstrap/app.php"
 FILE_CACHING="config/cache.php"
 FILE_DATABASE="config/database.php"
@@ -26,21 +67,26 @@ FILE_SESSION="config/session.php"
 FILE_VITE_BASE="vite.config"
 LARAVEL_INSTALLER="vendor/laravel/installer/src/NewCommand.php"
 
+# Script behavior flags configured in deploy-plan.json
 # Determine whether we should run npm actions (default: true)
 # Accepts boolean or string values in deploy-plan.json (e.g. "false" or false)
 RUN_NPM=$(php -r "\$d = json_decode(@file_get_contents('deploy-plan.json'), true); \$val = \$d['build']['run_npm'] ?? \$d['run_npm'] ?? null; if(\$val === null) { echo 'true'; } else { if(\$val === false || \$val === 'false') echo 'false'; else echo 'true'; }" | tr -d '\n' | xargs)
-echo "DEBUG: RUN_NPM='$RUN_NPM'"
+# New projects: keep Tailwind from Laravel installer unless --no-tailwind. Existing projects: leave Tailwind alone unless a flag is passed.
 TAILWIND=true
+TAILWIND_EXPLICIT=false
+# Temporary directory for Laravel installer output (will be merged into root)
 TEMP_DIR="./new-app"
+# UA_TEMPLATE flag controls whether to download University of Alabama templates
 UA_TEMPLATE=false
 
 # --------------------------------------
 # 🧾 Parse command-line flags
-# --------------------------------------
+# ------------------------------------- 
+# Process command-line arguments to override default behavior
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --pv) shift ;;
-        --no-tailwind) TAILWIND=false; shift ;;
+        --no-tailwind) TAILWIND=false; TAILWIND_EXPLICIT=true; shift ;;
+        --add-tailwind) TAILWIND=true; TAILWIND_EXPLICIT=true; shift ;;
         --ua-template) UA_TEMPLATE=true; shift ;;
         *) printf "${RED}❌ Unknown option: $1${NC}\n"; exit 1 ;;
     esac
@@ -48,7 +94,11 @@ done
 
 # --------------------------------------
 # 🔧 Define functions
-# --------------------------------------
+# ------------------------------------- 
+# Each function below handles a specific configuration task for the Laravel application
+
+# Configure the cache driver in Laravel's cache configuration
+# Sets the cache driver to 'file' for persistent file-based caching
 function_configure_caching() {
     echo ""
     printf "${PURPLE}🗄️ ${WHITE}Configuring cache driver in '$FILE_CACHING'...${NC}\n"
@@ -61,6 +111,9 @@ function_configure_caching() {
     fi
 }
 
+# Configure database connection settings based on deploy-plan.json
+# Reads database type from deploy-plan.json and updates config/database.php
+# Handles Oracle database driver installation if Oracle is configured
 function_configure_database() {
     DB_CONNECTION=$(php -r "
         \$databases = json_decode(file_get_contents('deploy-plan.json'), true)['image']['databases'] ?? [];
@@ -88,12 +141,16 @@ function_configure_database() {
     	    if ! grep -q 'yajra/laravel-oci8' composer.json 2>/dev/null; then
 				db_config_change=true
 
-        	    echo ""
-        	    printf "${ORANGE}📦 ${WHITE}Installing Oracle DB driver...${NC}\n"
-        	    composer require yajra/laravel-oci8 --no-interaction
-        	    echo ""
-        	    printf "${GREEN}✅ Oracle driver installed.${NC}\n"
-        	fi
+                echo ""
+                printf "${ORANGE}📦 ${WHITE}Installing Oracle DB driver...${NC}\n"
+                if composer require yajra/laravel-oci8 --no-interaction; then
+                    echo ""
+                    printf "${GREEN}✅ Oracle driver installed.${NC}\n"
+                else
+                    echo ""
+                    printf "${YELLOW}⚠️  Could not install Oracle driver (network issue?); continuing with existing setup.${NC}\n"
+                fi
+            fi
 
         	# Only inject the Oracle config block if it's not already there
         	if ! grep -q "'oracle' => \[" "$FILE_DATABASE"; then
@@ -134,6 +191,8 @@ function_configure_database() {
     fi
 }
 
+# Ensure .gitignore file has all standard Laravel exclusions
+# Adds missing patterns to prevent tracking of build artifacts, dependencies, and sensitive files
 function_configure_gitignore() {
     echo ""
     printf "${GRAY}🗂️  ${WHITE}Ensuring .gitignore has standard exclusions...${NC}\n"
@@ -181,6 +240,8 @@ EOF
     done
 }
 
+# Configure Laravel's logging system
+# Sets up stack-based logging with daily and stderr channels
 function_configure_logging() {
 	echo ""
     printf "${WHITE}📄 Configuring log settings in '$FILE_LOGGING'...${NC}\n"
@@ -200,6 +261,8 @@ function_configure_logging() {
     fi
 }
 
+# Configure trusted proxy servers in bootstrap/app.php
+# Enables Laravel to properly handle requests from proxy servers using internal network IPs
 function_configure_proxies() {
 	echo ""
     printf "${BRIGHT_BLUE}🌐 ${WHITE}Configuring trusted proxies in '$FILE_APP'...${NC}\n"
@@ -221,6 +284,8 @@ function_configure_proxies() {
     fi
 }
 
+# Configure the session driver
+# Sets session storage to use file-based sessions
 function_configure_session() {
     echo ""
     printf "${YELLOW}🔐 ${WHITE}Configuring session driver in '$FILE_SESSION'...${NC}\n"
@@ -233,6 +298,9 @@ function_configure_session() {
     fi
 }
 
+# Handle Tailwind CSS installation or removal based on TAILWIND flag
+# Installs Tailwind if enabled and not already present
+# Removes Tailwind if disabled and currently installed
 function_configure_tailwind() {
 	if [ "$TAILWIND" = false ]; then
 		if grep -q '"tailwindcss"' package.json || [ -d node_modules/tailwindcss ]; then
@@ -246,6 +314,8 @@ function_configure_tailwind() {
 	fi
 }
 
+# Configure Vite bundler settings for development and HMR
+# Adds server configuration with proper host and Hot Module Replacement settings
 function_configure_vite() {
 	echo ""
 	printf "${GRAY}🛠️ Configuring Vite settings...${NC}\n"
@@ -310,6 +380,8 @@ function_configure_vite() {
 	done
 }
 
+# Create a template README.md file with sections for application documentation
+# Includes placeholders for app title, data sources, integrations, and roles
 function_create_readme() {
 	echo ""
     printf "${BLUE}📘 ${WHITE}Creating README.md.${NC}\n"
@@ -366,14 +438,17 @@ EOL
 	printf "${GREEN}✅ README.md created.${NC}\n"
 }
 
+# Install and configure Tailwind CSS
+# Installs npm packages, creates config files, and adds Tailwind to CSS/Vite
 function_tailwind_install() {
     printf "${GRAY}✨ ${WHITE}Installing Tailwind CSS and configs...${NC}\n"
 
     if [ "$RUN_NPM" = "false" ]; then
         printf "${YELLOW}⚠️  Skipping Tailwind npm install because run_npm=false in deploy-plan.json${NC}\n"
+    elif npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite; then
+        :
     else
-        # Install Tailwind-related packages and update node_modules
-        npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
+        printf "${YELLOW}⚠️  Tailwind npm install failed (network issue?); continuing with existing packages if present.${NC}\n"
     fi
 
     # Create tailwind.config.js if missing
@@ -428,28 +503,34 @@ EOF
         }
     fi
 
-    # Add Tailwind plugin to vite.config.js if missing
-    if [ -f "$FILE_VITE" ]; then
+    # Add Tailwind plugin to vite.config.js/ts if missing
+    for FILE_VITE in "$FILE_VITE_BASE.js" "$FILE_VITE_BASE.ts"; do
+        if [ ! -f "$FILE_VITE" ]; then
+            continue
+        fi
         if ! grep -q 'tailwindcss' "$FILE_VITE"; then
-            # Insert import at the top after other imports
             sed -i '1i import tailwindcss from "@tailwindcss/vite";' "$FILE_VITE"
-
-            # Add tailwindcss() to plugins array (naive approach)
             sed -i '/plugins: \[/a \        tailwindcss(),' "$FILE_VITE"
-
             printf "Added Tailwind plugin to '$FILE_VITE'\n"
         fi
-    fi
+    done
 
     printf "${GREEN}✅ ${WHITE}Tailwind installed and configured!${NC}\n"
 }
 
+# Run composer install to fetch PHP dependencies
+# Uses prefer-dist to download pre-built packages for faster installation
 function_install_composer() {
     printf "${ORANGE}📦 ${WHITE}Running composer install...${NC}\n"
-    composer install --no-interaction --prefer-dist || true
-    printf "${GREEN}✅ Composer dependencies installed.${NC}\n"
+    if composer install --no-interaction --prefer-dist; then
+        printf "${GREEN}✅ Composer dependencies installed.${NC}\n"
+    else
+        printf "${YELLOW}⚠️  Composer install failed (network issue?); continuing with existing vendor/ if present.${NC}\n"
+    fi
 }
 
+# Run npm install and npm audit fix for Node.js dependencies
+# Respects the RUN_NPM flag from deploy-plan.json to skip if configured
 function_install_npm() {
     if [ "$RUN_NPM" = "false" ]; then
         printf "${YELLOW}⚠️  Skipping npm install/audit because run_npm=false in deploy-plan.json${NC}\n"
@@ -457,11 +538,15 @@ function_install_npm() {
     fi
 
     printf "${ORANGE}📦 ${WHITE}Running npm install...${NC}\n"
-    npm install || true
-    npm audit fix || true
-    printf "${GREEN}✅ NPM dependencies installed.${NC}\n"
+    if npm install && npm audit fix; then
+        printf "${GREEN}✅ NPM dependencies installed.${NC}\n"
+    else
+        printf "${YELLOW}⚠️  npm install failed (network issue?); continuing with existing node_modules/ if present.${NC}\n"
+    fi
 }
 
+# Remove Tailwind CSS and related dependencies
+# Uninstalls packages, removes config files, cleans CSS/SCSS directives, and prunes node_modules
 function_tailwind_remove() {
     printf "${GRAY}🗑️  ${WHITE}Removing Tailwind CSS files and config...${NC}\n"
 
@@ -498,21 +583,24 @@ function_tailwind_remove() {
         sed -i '/@import.*tailwindcss.*/d' resources/sass/app.scss
     fi
 
-    # Clean Tailwind plugin lines from vite.config.js if present
-    if [ -f "$FILE_VITE" ]; then
-        if grep -q 'tailwindcss' "$FILE_VITE"; then
+    # Clean Tailwind plugin lines from vite.config.js/ts if present
+    for FILE_VITE in "$FILE_VITE_BASE.js" "$FILE_VITE_BASE.ts"; do
+        if [ -f "$FILE_VITE" ] && grep -q 'tailwindcss' "$FILE_VITE"; then
             sed -i '/import.*tailwindcss.*/d' "$FILE_VITE"
             sed -i '/tailwindcss(),/d' "$FILE_VITE"
         fi
-    fi
+    done
 
     # Remove any leftover Tailwind node_modules folders
     rm -rf node_modules/tailwindcss node_modules/@tailwindcss
 
     # Prune unused packages from node_modules and update package-lock.json
     if [ "$RUN_NPM" != "false" ]; then
-        npm prune --omit=dev
-        npm install
+        if npm prune --omit=dev && npm install; then
+            :
+        else
+            printf "${YELLOW}⚠️  npm prune/install failed (network issue?); continuing with existing node_modules/.${NC}\n"
+        fi
     else
         printf "${YELLOW}⚠️  Skipping npm prune/install because run_npm=false in deploy-plan.json${NC}\n"
     fi
@@ -520,31 +608,40 @@ function_tailwind_remove() {
     printf "${GREEN}✅ ${WHITE}Tailwind removed and dependencies updated.${NC}\n"
 }
 
+# Download and add University of Alabama UI component templates
+# Pulls pre-built components (navigation, layouts, dropdowns, theme selector, etc.) from GitHub
 function_ua_template() {
-	if [ "$UA_TEMPLATE" = true ]; then
-    	echo ""
-    	printf "${ORANGE}📦 ${WHITE}Downloading UA templates...${NC}\n"
-    	wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/NavLinks.php && \
-    	wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/nav-links.blade.php && \
-    	wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/VerticalLayout.php && \
-    	wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/vertical-layout.blade.php && \
-    	wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/Dropdown.php && \
-    	wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/dropdown.blade.php
-    	wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/ThemeSelector.php && \
-    	wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/theme-selector.blade.php
-    	wget --no-check-certificate -nc -P public/img https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/img/nameplate.png
-		printf "${GREEN}✅ UA templates added.${NC}\n"
-	fi
+    if [ "$UA_TEMPLATE" = true ]; then
+        echo ""
+        printf "${ORANGE}📦 ${WHITE}Downloading UA templates...${NC}\n"
+        if wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/NavLinks.php && \
+           wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/nav-links.blade.php && \
+           wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/VerticalLayout.php && \
+           wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/vertical-layout.blade.php && \
+           wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/Dropdown.php && \
+           wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/dropdown.blade.php && \
+           wget --no-check-certificate -nc -P app/View/Components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/Components/ThemeSelector.php && \
+           wget --no-check-certificate -nc -P resources/views/components https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/component-views/theme-selector.blade.php && \
+           wget --no-check-certificate -nc -P public/img https://raw.githubusercontent.com/OIT-Development-Team/ui-components-public/refs/heads/main/img/nameplate.png; then
+            printf "${GREEN}✅ UA templates added.${NC}\n"
+        else
+            printf "${YELLOW}⚠️  Could not download UA templates (network issue?); continuing without updating templates.${NC}\n"
+        fi
+    fi
 }
 
 
-# --------------------------------------
+# ==============================================
 # 🚀 Main Execution
-# --------------------------------------
+# ==============================================
+# Check if this is a fresh Laravel installation or an existing app
+# Fresh installs: scaffold new project and apply all configurations
+# Existing apps: install missing dependencies and update configs only
 
 if [ ! -d app ]; then
     echo ""
     printf "${ORANGE}🚧 ${WHITE}Starting interactive Laravel scaffolding...${NC}\n"
+    # Install Laravel installer package and scaffold new application
     composer require laravel/installer
     if [ "$RUN_NPM" = "false" ]; then
         vendor/bin/laravel new --database=sqlite "$TEMP_DIR"
@@ -552,40 +649,63 @@ if [ ! -d app ]; then
         vendor/bin/laravel new --database=sqlite --npm "$TEMP_DIR"
     fi
 
-	printf "${ORANGE}📦 ${WHITE}Moving project files...${NC}\n"
-	# This method of moving the application should avoid any file limit issues
-	rm -rf vendor composer*
+    # Move generated project files from temp directory to workspace root
+    printf "${ORANGE}📦 ${WHITE}Moving project files...${NC}\n"
+    # This method of moving the application should avoid any file limit issues
+    rm -rf vendor composer*
     mv "$TEMP_DIR"/vendor ./
 	rm -rf "$TEMP_DIR"/.git*
     find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -exec mv -t . {} +
     rm -rf "$TEMP_DIR"
 	printf "\n${GREEN}✅ Project moved!${NC}\n"
 
+    # Fix npm security vulnerabilities (if npm is enabled)
     # Run npm audit fix only when enabled by deploy-plan.json
     if [ "$RUN_NPM" != "false" ]; then
         npm audit fix || true
     else
         printf "${YELLOW}⚠️  Skipping npm audit fix because run_npm=false in deploy-plan.json${NC}\n"
     fi
-	function_configure_caching
-	function_configure_database
-	function_configure_logging
-	function_configure_proxies
-	function_configure_session
-	function_configure_tailwind
-	function_configure_vite
+    
+    # Apply all Laravel configuration functions for NEW projects
+    # Note: New projects receive ALL configurations (caching, logging, proxies, session, etc.)
+    # to ensure a fully optimized setup out of the box
+    function_configure_caching
+    function_configure_database
+    function_configure_logging
+    function_configure_proxies
+    function_configure_session
+    function_configure_tailwind
+    function_configure_vite
     function_create_readme
 	function_ua_template
     function_configure_gitignore
 
-    echo ""
     printf "\n${GREEN}✅ Laravel scaffolding complete.${NC}\n"
 else
+    # EXISTING PROJECT MODE
+    # For existing Laravel installations, install missing dependencies and update critical configurations
+    # This allows you to run the script on an existing project to ensure dependencies are installed
+    # and critical configs (database, vite, gitignore) are properly set up
+    
+    echo ""
+    printf "${BRIGHT_BLUE}🌐 ${WHITE}Detected existing Laravel application. Running update mode...${NC}\n"
+    
+    # Install Node dependencies if not present (and npm is enabled)
     [ "$RUN_NPM" != "false" ] && [ ! -d node_modules ] && function_install_npm
+    # Install PHP dependencies if not present
     [ ! -d vendor ] && function_install_composer
+    
+    # Update critical configuration files for existing installations
     function_configure_database
     function_configure_vite
+    # Tailwind: only when explicitly requested on an existing project
+    if [ "$TAILWIND_EXPLICIT" = true ]; then
+        function_configure_tailwind
+    fi
+    # Handle UA template downloads for existing projects (if --ua-template flag is set)
+    function_ua_template
     function_configure_gitignore
 
-    printf "\n${GREEN}✅ Laravel application already exists.${NC}\n"
+    printf "\n${GREEN}✅ Laravel application updated.${NC}\n"
 fi
