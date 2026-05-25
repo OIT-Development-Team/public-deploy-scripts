@@ -6,7 +6,7 @@
 	},
 	"image": {
 		"name": "php",
-		"tag": "8.5-latest-slim",
+		"tag": "8.5-latest",
 		"databases": [],
 		"os_modules": [],
 		"php_extensions": [],
