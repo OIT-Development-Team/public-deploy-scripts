@@ -9,6 +9,7 @@
 # Remote resources are fetched when possible so updates are picked up. If a fetch
 # fails (e.g. offline), the script falls back to an existing local copy where appropriate.
 # deploy-plan.json and docker-compose.yaml are never overwritten once present (project-specific).
+# GitHub workflow and pre-commit hook are fetched only when missing.
 # add-pv.sh and laravel-app.sh are downloaded when needed and removed after use.
 #
 # USAGE:
@@ -39,7 +40,12 @@ fetch_or_fallback() {
     url="$1"
     dest="$2"
     label="$3"
-    tmp="${dest}.tmp.$$"
+    tmp=".fetch.tmp.$$"
+    dest_dir=$(dirname "$dest")
+
+    if [ "$dest_dir" != "." ]; then
+        mkdir -p "$dest_dir"
+    fi
 
     if curl -sSL -f -o "$tmp" "$url"; then
         mv "$tmp" "$dest"
@@ -177,6 +183,21 @@ fetch_if_missing_or_fallback \
     "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json" \
     "deploy-plan.json" \
     "deploy-plan.json"
+
+# TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml
+# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
+fetch_if_missing_or_fallback \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml" \
+    ".github/workflows/build.yaml" \
+    ".github/workflows/build.yaml"
+
+# TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
+# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit
+fetch_if_missing_or_fallback \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit" \
+    ".git/hooks/pre-commit" \
+    ".git/hooks/pre-commit"
+[ -f .git/hooks/pre-commit ] && chmod +x .git/hooks/pre-commit
 
 # --------------------------------------
 # Persistent volumes (--pv): download, run on host, then remove (never kept locally)
