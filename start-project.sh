@@ -186,10 +186,14 @@ fetch_if_missing_or_fallback \
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
-fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml" \
-    ".github/workflows/build.yaml" \
-    ".github/workflows/build.yaml"
+if [ -f ".github/workflows/build-v2.yaml" ]; then
+    echo "ℹ️  Using existing .github/workflows/build-v2.yaml; skipping build.yaml"
+else
+    fetch_if_missing_or_fallback \
+        "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml" \
+        ".github/workflows/build.yaml" \
+        ".github/workflows/build.yaml"
+fi
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit
