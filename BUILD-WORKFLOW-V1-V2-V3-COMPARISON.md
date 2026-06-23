@@ -1,6 +1,6 @@
 # Laravel Build Workflow: v1 vs v2 vs v3
 
-How each generation works, what lives where, and why v3 is the target — including honest gaps.
+Reference for deployment models, file layout, and migration. Covers v1 (legacy), v2 (tag-gated prod), and v3 (current pilot target).
 
 ---
 
@@ -27,6 +27,7 @@ How each generation works, what lives where, and why v3 is the target — includ
 - **Tests:** none in deploy path
 - **Prod release:** yes — but **created twice** on tag push (known bug)
 - **sync-main:** separate workflow on every `prod` push
+- **Vault refresh:** manual `restart-app.yml` caller → reusable `refresh-vault-secrets.yml` (renamed from `restart-app.yml`)
 - **Image tags:** `uadevelopment/{app}:test` or `:v1.2.3`
 
 ### v3 — new standard (laravel-test pilot)
@@ -40,7 +41,8 @@ How each generation works, what lives where, and why v3 is the target — includ
 - **Prod release:** once, via shared `release.yml`
 - **sync-main:** built into reusable workflow; runs after successful prod tag release
 - **Image tags:** same as v2
-- **Onboarding:** `start-project.sh` installs `build-v3.yaml` + `refresh-vault-secrets.yaml`
+- **Vault refresh:** manual workflow; app caller `refresh-vault-secrets.yaml` → reusable `refresh-vault-secrets.yml`
+- **Onboarding:** `start-project.sh` removes legacy workflows, then installs `build-v3.yaml` + `refresh-vault-secrets.yaml`
 
 **Headline:** v2 and v3 share the same deployment *intent*. v1 is the outlier — merge to prod deploys. v3 combines v2's governance with v1's caller simplicity and adds quality gates.
 
@@ -49,24 +51,29 @@ How each generation works, what lives where, and why v3 is the target — includ
 ## How the Pieces Connect
 
 ```
-public-deploy-scripts          app repo                    build-laravel-app-image
-(template)                     (caller)                    (reusable)
+public-deploy-scripts          app repo                         build-laravel-app-image
+(template)                     (caller)                         (reusable)
 
-build-v3.yaml  ──copy──►  .github/workflows/build-v3.yaml
-refresh-vault-secrets.yaml   .github/workflows/refresh-vault-secrets.yaml
+build-v3.yaml  ──copy──►  .github/workflows/build-v3.yaml ──uses──► build-deploy-app-v3.yml@test
+                               │                                      ├── pint.yml
+                               │                                      ├── tests.yml
+                               │                                      ├── release.yml
+                               │                                      └── sync-main (inline job)
                                │
-                               └── uses ──► build-deploy-app-v3.yml
-                                            ├── pint.yml
-                                            ├── tests.yml
-                                            ├── release.yml
-                                            └── (sync-main inline)
+refresh-vault-secrets.yaml     refresh-vault-secrets.yaml ──uses──► refresh-vault-secrets.yml@test
+(copy)                         (manual dispatch only;               (separate from deploy)
+                                not part of build-v3)
 ```
 
 **Three layers:**
 
 - **Template** (`public-deploy-scripts`) — canonical YAML copied into app repos
-- **App caller** (`{app}/.github/workflows/`) — defines *when* deploy runs
-- **Reusable** (`ua-app-images/build-laravel-app-image`) — shared validate, pint, tests, build, GitOps, release
+- **App caller** (`{app}/.github/workflows/`) — defines *when* a workflow runs
+- **Reusable** (`ua-app-images/build-laravel-app-image`) — shared build, quality gates, GitOps, release logic
+
+**Pilot refs:** v3 templates and `laravel-test` call reusables at `@test` (e.g. `build-deploy-app-v3.yml@test`). After fleet promotion, switch callers to `@main`.
+
+**`start-project.sh` (v3 onboarding):** on each run, removes legacy app workflows (`build.yaml`, `build-v2.yaml`, `sync-main.yml`, `lint.yml`, `tests.yml`, `restart-app.yml`), then fetches `build-v3.yaml` and `refresh-vault-secrets.yaml` if missing. Installs `laravel-hooks/pre-commit` → `.git/hooks/pre-commit` if missing (does not overwrite an existing hook).
 
 ---
 
@@ -155,7 +162,7 @@ Reusable:
   softprops release → duplicate with caller release job on tags
 ```
 
-Requires caller to pass `branch: test` or `branch: prod`. No lint or tests in deploy path.
+Requires caller to pass `branch: test` or `branch: prod`. No Pint or tests in deploy path.
 
 ### v3 — `build-deploy-app-v3.yml`
 
@@ -202,11 +209,11 @@ Runs on all branch pushes. Can commit `"style: Apply Laravel Pint fixes"` back t
 
 ### v2 — none in deploy path
 
-Optional standalone `lint.yml` on all branches — rarely installed. Pre-commit hook is the main defense.
+Optional standalone `lint.yml` in the app repo (all-branch push) — rarely installed. Pre-commit hook is the main defense.
 
 ### v3 — Pint + tests block deploy
 
-**Pint** (always on deploy triggers): `./vendor/bin/pint --test`, or `composer lint:check` when defined. Optional npm `format` / `lint` scripts if the app defines them. Check-only — never commits.
+**Pint job** (`pint.yml`, `workflow_call` only — not triggered on feature branches): `./vendor/bin/pint --test`, or `composer lint:check` when defined. Optional npm `format` / `lint` scripts if the app defines them. Check-only — never commits.
 
 **Tests** (skip cleanly when not ready):
 
@@ -223,15 +230,29 @@ Pre-commit hook (from `start-project.sh`) is still the first line of defense.
 
 ## Companion Workflows
 
-**`refresh-vault-secrets.yaml`** — all versions. Manual dispatch. Forces Vault secret resync + pod restart. Not part of deploy. Reusable: `refresh-vault-secrets.yml`.
+These are **separate from deploy** — not jobs inside `build-deploy-app-v3.yml`.
 
-**sync-main**
+### Refresh Vault Secrets & Restart
+
+Manual `workflow_dispatch` only. Bumps GitOps annotations so External Secrets Operator re-fetches from Vault and pods restart. Does **not** rebuild the Docker image.
+
+| | App caller file | Reusable |
+|---|---|---|
+| **v3** | `refresh-vault-secrets.yaml` | `refresh-vault-secrets.yml` |
+| **v2** | `restart-app.yml` (legacy filename) | `refresh-vault-secrets.yml` (was `restart-app.yml`) |
+| **v1** | not standard; add manually if needed | same reusable when installed |
+
+GitHub UI name: **Refresh Vault Secrets & Restart**.
+
+### sync-main
 
 - v1: not used
-- v2: separate workflow; runs on `prod` push
-- v3: built into reusable; runs after successful prod tag release
+- v2: separate app workflow; runs on `prod` push
+- v3: inline job in `build-deploy-app-v3.yml`; runs after successful prod tag release
 
-- **`pint.yml`** (standalone, legacy filename `lint.yml`) — optional, all-branch push. v3 uses reusable `pint.yml` in deploy path instead.
+### Optional standalone quality workflows (v1/v2 only)
+
+Historically, some v2 apps installed a separate app-repo `lint.yml` (all-branch push) or `tests.yml`. **v3 does not use these** — Pint and tests run inside the deploy reusable via `pint.yml` and `tests.yml` (`workflow_call` only, invoked by `build-deploy-app-v3.yml`).
 
 ---
 
@@ -245,7 +266,7 @@ Pre-commit hook (from `start-project.sh`) is still the first line of defense.
 6. **Quality gates without auto-commit** — blocks bad deploys; doesn't rewrite repos from CI
 7. **Better sync-main timing** — after release, not on every prod merge before tag
 8. **Modern build hygiene** — lockfile required, current Actions, PHP 8.5 default
-9. **Simple onboarding** — `start-project.sh` installs the v3 bundle
+9. **Simple onboarding** — `start-project.sh` removes legacy workflows and installs the v3 bundle
 
 ---
 
@@ -287,7 +308,7 @@ These are trade-offs, not bugs:
 - v1: not really possible — merge deploys
 - v2 / v3: merge PR into `prod`; deploy only when tagged
 
-**Resync Vault secrets** — run **Refresh Vault Secrets & Restart** workflow manually (all versions).
+**Resync Vault secrets** — run **Refresh Vault Secrets & Restart** manually (v2/v3 when installed).
 
 **Sync `main` to match prod**
 
@@ -311,7 +332,7 @@ These are trade-offs, not bugs:
 ## Adoption Today
 
 - **Most OIT Laravel apps** — v1 (`build.yaml`, merge-to-prod)
-- **box-optin, emma-api** — v2 (some still have legacy `build.yaml` — remove to avoid double-runs)
+- **box-optin, emma-api** — v2 (`build-v2.yaml`, caller `restart-app.yml`; update reusable ref to `refresh-vault-secrets.yml` after rename)
 - **laravel-test** — v3 pilot (`@test` ref on reusable)
 - **public-deploy-scripts** — v3 templates; `start-project.sh` installs bundle from `test` branch
 - **build-laravel-app-image** — all three reusables coexist; v3 on `test` during pilot
@@ -320,12 +341,14 @@ These are trade-offs, not bugs:
 
 ## Migration Checklist (v1 or v2 → v3)
 
-1. Remove legacy `build.yaml` if present
-2. Install `build-v3.yaml` + `refresh-vault-secrets.yaml`
-3. Commit `package-lock.json` if missing
-4. Confirm branch protection on `prod`
-5. Verify test deploy on push to `test`
-6. Verify prod deploy on tag + GitHub Release + sync-main
+1. Remove legacy app workflows: `build.yaml`, `build-v2.yaml`, `sync-main.yml`, `lint.yml`, `tests.yml`, `restart-app.yml` (or run `start-project.sh` / `laravel-app`, which removes them automatically)
+2. Install `build-v3.yaml` + `refresh-vault-secrets.yaml` (from `public-deploy-scripts/test`)
+3. Confirm callers use `@test` during pilot, then `@main` after promotion
+4. Commit `package-lock.json` if missing
+5. Confirm branch protection on `prod`
+6. Verify test deploy on push to `test` (`validate → pint → tests → build-app → …`)
+7. Verify prod deploy on tag + GitHub Release + sync-main
+8. Verify **Refresh Vault Secrets & Restart** manual workflow (test environment)
 
 ---
 
@@ -333,16 +356,27 @@ These are trade-offs, not bugs:
 
 **public-deploy-scripts**
 
-- `build.yaml` — v1 template (legacy on stable)
-- `build-v2.yaml` — v2 template
-- `build-v3.yaml` — v3 template
-- `refresh-vault-secrets.yaml` — app caller (all versions)
-- `laravel-hooks/pre-commit` — Pint hook template
-- `start-project.sh` — installs v3 bundle for new projects
+| Branch | What it ships |
+|---|---|
+| **`test`** (v3 pilot) | `build-v3.yaml`, `refresh-vault-secrets.yaml`, `start-project.sh`, `laravel-app.sh`, `laravel-hooks/pre-commit`, `deploy-plan.json`, `docker-compose.yaml` |
+| **`stable`** (legacy) | `build.yaml` (v1), older templates — not used by current `start-project.sh` on `test` |
+
+**App repo (v3)**
+
+- `.github/workflows/build-v3.yaml` — deploy caller
+- `.github/workflows/refresh-vault-secrets.yaml` — manual vault refresh caller
+- `.git/hooks/pre-commit` — installed from template (local only, not committed)
 
 **ua-app-images/build-laravel-app-image**
 
-- `build-deploy-app.yml` — v1 reusable
-- `build-deploy-app-v2.yml` — v2 reusable
-- `build-deploy-app-v3.yml` — v3 reusable
-- `pint.yml`, `tests.yml`, `release.yml`, `refresh-vault-secrets.yml` — shared sub-workflows called by v3
+| Reusable | Used by |
+|---|---|
+| `build-deploy-app.yml` | v1 |
+| `build-deploy-app-v2.yml` | v2 |
+| `build-deploy-app-v3.yml` | v3 deploy orchestration |
+| `pint.yml` | v3 deploy (`workflow_call` from v3 only) |
+| `tests.yml` | v3 deploy (`workflow_call` from v3 only) |
+| `release.yml` | v3 prod tag releases |
+| `refresh-vault-secrets.yml` | manual vault refresh ( **not** part of deploy) |
+
+All v3 reusables coexist on the `test` branch during pilot; v1/v2 reusables remain on `main`.
