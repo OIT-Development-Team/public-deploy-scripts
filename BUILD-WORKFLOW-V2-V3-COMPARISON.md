@@ -1,375 +1,350 @@
-# Laravel Build Workflow: v2 vs v3 Comparison
+# Laravel Build Workflow: v1 vs v2 vs v3
 
-A reference for how v2 and v3 work, what lives where, and how production governance fits together.
-
----
-
-## Executive Summary
-
-Both v2 and v3 use the same **deployment model**:
-
-- **TEST** — push/merge to `test` → automatic deploy
-- **PROD** — tag `vX.Y.Z` on current `prod` HEAD → deploy + GitHub Release
-- **PROD branch updates** — governed by **branch protection** (PR required), not by the workflow itself
-
-The main difference is **architecture**, not deploy behavior:
-
-| | v2 | v3 |
-|---|---|---|
-| **Caller workflow** | 61 lines, 4 jobs, orchestration in each app | 18 lines, 1 job, thin wrapper |
-| **Reusable workflow** | Build + GitOps only; caller passes `branch` | Validate + build + GitOps + release; caller passes `repository` only |
-| **Prod release** | Created twice on tag push (bug) | Created once via `release.yml` |
-| **Validation** | Tag checks in caller only | All trigger validation in reusable workflow |
+How each generation works, what lives where, and why v3 is the target — including honest gaps.
 
 ---
 
-## Three-Layer Architecture
+## At a Glance
 
-Both versions use the same three layers:
+### v1 — legacy (most production apps today)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Layer 1: Template (public-deploy-scripts)                      │
-│    build-v2.yaml  or  build-v3.yaml                             │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ install / copy
-┌────────────────────────────▼────────────────────────────────────┐
-│  Layer 2: App repo (.github/workflows/)                         │
-│    build-v2.yaml / build-v3.yaml                                │
-│    + restart-app.yml, sync-main.yml (companions)                │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ uses: @main
-┌────────────────────────────▼────────────────────────────────────┐
-│  Layer 3: Shared reusable (ua-app-images/build-laravel-app-image)│
-│    build-deploy-app-v2.yml  or  build-deploy-app-v3.yml         │
-│    + release.yml, restart-app.yml, lint.yml                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+- **Prod deploy:** push or merge to `prod` → ships immediately
+- **Test deploy:** push to `test`
+- **App workflow:** ~18 lines, 1 job, passes `branch: ${{ github.ref_name }}`
+- **Triggers on:** every branch push (Pint may run on feature branches; build only on `test`/`prod`)
+- **Pint:** runs in deploy path and **auto-commits** fixes back to the repo
+- **Tests:** none in CI deploy path
+- **Prod release:** no GitHub Release; MS Teams notification on deploy
+- **Image tags:** `uadevelopment/{app}:prod-847` (branch + run number)
 
-| Layer | Location | Role |
-|---|---|---|
-| **Template** | `OIT-Development-Team/public-deploy-scripts/` | Canonical copy installed into app repos |
-| **App caller** | `{app}/.github/workflows/build-v2.yaml` or `build-v3.yaml` | Triggers + delegates to shared reusable workflow |
-| **Reusable** | `ua-app-images/build-laravel-app-image/.github/workflows/` | Shared build, validate, GitOps, release logic |
+### v2 — tag-gated prod (box-optin, emma-api)
 
----
+- **Prod deploy:** tag `vX.Y.Z` on current `prod` HEAD only
+- **Test deploy:** push to `test`
+- **App workflow:** ~61 lines, 4 jobs (validate, build-test, build-prod, release)
+- **Triggers on:** push to `test`, semver tags, manual dispatch
+- **Pint:** removed from deploy; optional separate `lint.yml` (rarely installed)
+- **Tests:** none in deploy path
+- **Prod release:** yes — but **created twice** on tag push (known bug)
+- **sync-main:** separate workflow on every `prod` push
+- **Image tags:** `uadevelopment/{app}:test` or `:v1.2.3`
 
-## Layer 2: App Caller Workflows
+### v3 — new standard (laravel-test pilot)
 
-### Triggers — identical in v2 and v3
+- **Prod deploy:** same tag-gated model as v2
+- **Test deploy:** push to `test`
+- **App workflow:** ~18 lines, 1 job — passes `repository` only
+- **Triggers on:** push to `test`, semver tags, manual dispatch
+- **Pint / lint:** check-only gate before build (never auto-commits)
+- **Tests:** conditional gate before build (skips when project isn't CI-ready)
+- **Prod release:** once, via shared `release.yml`
+- **sync-main:** built into reusable workflow; runs after successful prod tag release
+- **Image tags:** same as v2
+- **Onboarding:** `start-project.sh` installs `build-v3.yaml` + `restart-app.yml`
 
-```yaml
-on:
-  push:
-    branches: [test]
-    tags: [v*]
-  workflow_dispatch:
-```
-
-| Event | v2 | v3 |
-|---|---|---|
-| Push to `test` | Runs | Runs |
-| Push to `prod` | Nothing | Nothing |
-| Push to `main`/feature | Nothing | Nothing |
-| Push tag `v1.2.3` | Runs (if on prod HEAD) | Runs (if on prod HEAD) |
-| Manual dispatch | Runs | Runs |
-
-### Jobs — where they diverge
-
-**v2 caller** (`build-v2.yaml`) — 4 jobs, ~61 lines:
-
-| Job | When it runs | What it does |
-|---|---|---|
-| `validate-prod-tag` | Tag push only | Checks semver format + tag SHA == `prod` HEAD |
-| `build-test` | Branch push | Calls reusable v2 with `branch: test` |
-| `build-prod` | Tag push (after validate) | Calls reusable v2 with `branch: prod` |
-| `release` | Tag push (after build-prod) | Calls `release.yml` |
-
-**v3 caller** (`build-v3.yaml`) — 1 job, ~18 lines:
-
-| Job | When it runs | What it does |
-|---|---|---|
-| `deploy` | Any allowed trigger | Calls reusable v3 with `repository` only |
-
-### v2 caller example
-
-```yaml
-jobs:
-  validate-prod-tag:
-    if: github.ref_type == 'tag'
-    runs-on: ubuntu-latest
-    steps:
-      # ... tag format + prod HEAD checks ...
-
-  build-test:
-    if: github.ref_type == 'branch'
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v2.yml@main
-    with:
-      repository: ${{ github.repository }}
-      branch: test
-    secrets: inherit
-
-  build-prod:
-    needs: validate-prod-tag
-    if: github.ref_type == 'tag'
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v2.yml@main
-    with:
-      repository: ${{ github.repository }}
-      branch: prod
-    secrets: inherit
-
-  release:
-    needs: build-prod
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/release.yml@main
-    with:
-      repository: ${{ github.repository }}
-    secrets: inherit
-```
-
-### v3 caller example
-
-```yaml
-jobs:
-  deploy:
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v3.yml@main
-    with:
-      repository: ${{ github.repository }}
-    secrets: inherit
-```
+**Headline:** v2 and v3 share the same deployment *intent*. v1 is the outlier — merge to prod deploys. v3 combines v2's governance with v1's caller simplicity and adds quality gates.
 
 ---
 
-## Layer 3: Reusable Workflows
-
-### Inputs
-
-| Input | v2 reusable | v3 reusable |
-|---|---|---|
-| `repository` | Required (full name) | Required (full name) |
-| `branch` | Required (`test` or `prod`) | **Removed** — derived from event |
-
-### Jobs
-
-| Job | v2 reusable | v3 reusable |
-|---|---|---|
-| `validate` | — | Resolves test vs prod; validates tags |
-| `build-app` | Checkout `inputs.branch` | Checkout `needs.validate.outputs.deploy_branch` |
-| `update-gitops-folder` | Uses `inputs.branch` for paths | Uses `deploy_branch` output |
-| `release` | Inline `softprops/action-gh-release` | Calls `release.yml` (single path) |
-
-### v2 reusable flow
+## How the Pieces Connect
 
 ```
-App build-v2.yaml
-  ├── validate-prod-tag (tags only, in caller)
-  ├── build-deploy-app-v2.yml (branch=test or prod)
-  │     ├── build-app
-  │     ├── update-gitops
-  │     └── softprops release  ← duplicate
-  └── release.yml              ← duplicate on prod tags
+public-deploy-scripts          app repo                    build-laravel-app-image
+(template)                     (caller)                    (reusable)
+
+build-v3.yaml  ──copy──►  .github/workflows/build-v3.yaml
+restart-app.yml           .github/workflows/restart-app.yml
+                               │
+                               └── uses ──► build-deploy-app-v3.yml
+                                            ├── lint.yml
+                                            ├── tests.yml
+                                            ├── release.yml
+                                            └── (sync-main inline)
 ```
 
-### v3 reusable flow
+**Three layers:**
 
-```
-App build-v3.yaml
-  └── build-deploy-app-v3.yml
-        ├── validate (all triggers)
-        ├── build-app
-        ├── update-gitops
-        └── release.yml (prod tags only, once)
-```
+- **Template** (`public-deploy-scripts`) — canonical YAML copied into app repos
+- **App caller** (`{app}/.github/workflows/`) — defines *when* deploy runs
+- **Reusable** (`ua-app-images/build-laravel-app-image`) — shared validate, lint, tests, build, GitOps, release
 
 ---
 
-## Example App Repos
+## Deployment Models
 
-### v2 adopter: box-optin
+### v1 — merge-to-prod
 
-| File | Purpose |
-|---|---|
-| `build-v2.yaml` | Deploy orchestration (4 jobs) |
-| `build.yaml` | Legacy v1 (still present — should be removed) |
-| `restart-app.yml` | Manual Vault secret resync + pod restart |
-| `sync-main.yml` | Resets `main` to match `prod` after prod merges |
+```
+Push ANY branch
+  ├── test branch  → deploy TEST
+  ├── prod branch  → deploy PROD  ⚠ immediate
+  └── other        → Pint may run; no deploy
+```
 
-Installed via `install-workflows.sh` (currently installs v2 bundle).
+No tag gate. Branch protection is the only guard before prod code changes; the workflow does not add a release step.
 
-### v3 adopter: laravel-test
+### v2 and v3 — tag-gated prod
 
-| File | Purpose |
-|---|---|
-| `build-v3.yaml` | Thin deploy caller (1 job) |
-| `restart-app.yml` | Manual Vault secret resync + pod restart |
+```
+Push to test              → deploy TEST
+Push/merge to prod        → nothing (code only)
+Tag vX.Y.Z on prod HEAD   → deploy PROD + GitHub Release
+```
 
-Legacy `build.yaml` (v1) removed to avoid double-runs.
+Someone must intentionally tag current `prod` HEAD to ship. Invalid tags or tags on the wrong commit fail validation.
+
+**Governance note:** PR approval is enforced by **GitHub branch protection**, not inside any build workflow.
 
 ---
 
-## Deployment Behavior (Same in v2 and v3)
+## What Happens on Each Event
 
-### TEST environment
+**Push to `test`**
 
-```
-Developer merges to test → build workflow runs → Docker :test → GitOps test/ → Argo CD deploys
-```
+- v1: deploy to TEST
+- v2: deploy to TEST
+- v3: deploy to TEST (after lint + tests pass)
 
-- Image: `uadevelopment/{app-name}:test`
-- GitOps path: `OIT-GITOPS/test-cluster/applications/test/{app-name}/`
+**Push/merge to `prod`**
 
-### PROD environment
+- v1: deploy to PROD immediately
+- v2: nothing (v2 `sync-main.yml` may reset `main` to match `prod`)
+- v3: nothing
 
-```
-Developer merges PR to prod → prod branch updated (no deploy)
-Someone tags prod HEAD     → build workflow runs → Docker :vX.Y.Z → GitOps prod/ → Release
-```
+**Push to `main` or a feature branch**
 
-- Image: `uadevelopment/{app-name}:v1.2.3`
-- GitOps path: `OIT-GITOPS/test-cluster/applications/prod/{app-name}/`
+- v1: workflow runs; Pint may auto-commit; no deploy unless ref is test/prod
+- v2: nothing
+- v3: nothing
 
-### Governance model (branch protection + tags)
+**Tag `v1.2.3` on prod HEAD**
 
-Production governance uses two layers:
+- v1: runs if caller receives tag ref (unusual in v1 setups)
+- v2: validate → build prod → GitHub Release (×2)
+- v3: validate → lint → tests → build → GitOps → Release → sync-main
 
-**Layer 1 — GitHub branch protection (who can change `prod`):**
+**Manual workflow dispatch**
 
-- Normal developers cannot push directly to `prod`
-- Code reaches `prod` via approved/merged PRs
-- Admins may bypass protection (process: still use PRs)
-
-**Layer 2 — Build workflow (what triggers a deploy):**
-
-- Merge/push to `prod` does **not** deploy
-- Only a semver tag (`vX.Y.Z`) on current `prod` HEAD triggers prod deploy
-- Tag on wrong commit fails validation
-
-| Control | Enforced by | v2 | v3 |
-|---|---|---|---|
-| Devs can't push directly to `prod` | Branch protection | Yes (org setting) | Yes (org setting) |
-| Code on `prod` came via PR | Branch protection + process | Indirect | Indirect |
-| Prod deploy requires semver tag | Workflow | Yes | Yes |
-| Tag must be on current `prod` HEAD | Workflow | Yes | Yes |
-| PR approval checked in workflow | — | **No** | **No** |
-
-**Takeaway:** PR approval is enforced by **protected branches**, not by the build workflow. The workflow adds an intentional **tag gate** before anything reaches production.
+- v1: runs on current ref
+- v2: can deploy test from wrong branch (loose)
+- v3: fails unless ref is `test` or a valid prod tag
 
 ---
 
-## Build Pipeline (Same in v2 and v3 reusable)
+## Reusable Workflow: What Each Version Runs
 
-Once validation passes, both versions run the same build steps:
+### v1 — `build-deploy-app.yml`
 
-1. Checkout app repo (`test` or `prod` branch)
-2. Read `deploy-plan.json` (PHP version, npm, DB, ingress, etc.)
+```
+pint-fix          → Pint + auto-commit to app repo
+build-app         → Docker build/push (test or prod refs only)
+update-gitops     → commit manifests
+MS Teams notify
+```
+
+Requires caller to pass `branch`. Uses older Actions. Optional `package-lock.json`. Extra secret: `MSTEAMS_WEBHOOK`.
+
+### v2 — `build-deploy-app-v2.yml` (+ caller orchestration)
+
+```
+Caller: validate-prod-tag | build-test | build-prod | release.yml
+
+Reusable:
+  build-app         → Docker build/push
+  update-gitops     → commit manifests
+  softprops release → duplicate with caller release job on tags
+```
+
+Requires caller to pass `branch: test` or `branch: prod`. No lint or tests in deploy path.
+
+### v3 — `build-deploy-app-v3.yml`
+
+```
+validate          → resolve test vs prod; reject bad triggers
+lint       ──┐
+tests      ──┴→ parallel quality gates (tests skip when not CI-ready)
+build-app         → Docker build/push
+update-gitops     → commit manifests
+release           → prod tags only, once
+sync-main         → prod tags only, after release
+```
+
+Caller passes `repository` only. Branch derived from the triggering event.
+
+---
+
+## Build Pipeline (shared core)
+
+All versions, once past gates:
+
+1. Checkout app repo
+2. Read `deploy-plan.json`
 3. `composer install --no-dev`
-4. `npm ci` + `npm run build` (requires committed `package-lock.json`)
+4. npm install/build (when `run_npm` is true)
 5. Generate or use `Dockerfile`
-6. Push image to DockerHub
-7. Call build-dockerfile-api for K8s manifests
-8. Commit manifests to GitOps repo
+6. Push to DockerHub
+7. Generate K8s manifests via build-dockerfile-api
+8. Commit to GitOps (`OIT-GITOPS/test-cluster`)
 
-**Not included in v2 or v3 build:** Laravel Pint (use optional `lint.yml` separately).
+**Build differences worth knowing:**
 
----
-
-## Companion Workflows (Same for v2 and v3 apps)
-
-| Workflow | Trigger | Purpose |
-|---|---|---|
-| `restart-app.yml` | Manual (`workflow_dispatch`) | Bump ExternalSecret + Deployment annotations → force Vault resync and pod restart |
-| `sync-main.yml` | Push to `prod` | Force-reset `main` branch to match `prod` |
-| `lint.yml` | Push to any branch (optional) | Pint / lint checks |
-
-These are **separate** from the build workflow by design — secret resync should not require a full image rebuild.
+- **v1:** PHP 8.4 default; lockfile optional; image tag `{branch}-{run#}`; older Actions
+- **v2:** lockfile required (`npm ci`); image tag `{ref}`; no Teams webhook
+- **v3:** PHP 8.5 default; lockfile required; image tag `{ref}`; lint/tests before build
 
 ---
 
-## v2 → v3: What Changed vs What Didn't
+## Quality Gates
 
-### Changed
+### v1 — Pint auto-commit on every push
 
-| Area | v2 | v3 |
-|---|---|---|
-| Caller size | ~61 lines, 4 jobs | ~18 lines, 1 job |
-| Orchestration location | Split between caller + reusable | Consolidated in reusable |
-| Reusable `branch` input | Required from caller | Removed; auto-resolved |
-| Prod GitHub Release | **Twice** (inline + `release.yml`) | **Once** (`release.yml` only) |
-| Test trigger validation | Implicit (caller `if` only) | Explicit (`ref_name` must be `test`) |
-| `workflow_dispatch` from wrong branch | Could deploy test while on `main` | Fails with clear error |
-| GitOps job debug steps | PWD, cat manifests, git status | Removed |
+Runs on all branch pushes. Can commit `"style: Apply Laravel Pint fixes"` back to the app repo from CI. No frontend lint. No tests.
 
-### Unchanged
+### v2 — none in deploy path
 
-| Area | v2 | v3 |
-|---|---|---|
-| Deploy triggers | push `test`, tag `v*` | Same |
-| Prod = tag on prod HEAD | Yes | Yes |
-| Push to `prod` alone deploys | No | No |
-| Docker tagging | `:test` or `:vX.Y.Z` | Same |
-| GitOps target | `OIT-GITOPS/test-cluster` | Same |
-| Required secrets | Org secrets via `secrets: inherit` | Same |
-| `package-lock.json` required | Yes | Yes |
-| Pint in build | No | No |
-| PR approval in workflow | No | No |
+Optional standalone `lint.yml` on all branches — rarely installed. Pre-commit hook is the main defense.
+
+### v3 — lint + tests block deploy
+
+**Lint** (always on deploy triggers): `composer lint`, `npm run format`, `npm run lint`. Check-only — never commits.
+
+**Tests** (skip cleanly when not ready):
+
+- Skip if no `.env.example`
+- Skip if `run_npm: false` in deploy-plan
+- Skip if no `*Test.php` files under `tests/`
+- Skip if no Pest or PHPUnit in `composer.json` require-dev
+- When running: prefers Pest, falls back to PHPUnit
+- Failing tests block deploy
+
+Pre-commit hook (from `start-project.sh`) is still the first line of defense.
 
 ---
 
-## Adoption Status
+## Companion Workflows
 
-| App / artifact | Version | Notes |
-|---|---|---|
-| `public-deploy-scripts` template | v2 in `install-workflows.sh`; v3 template added | v3 not yet default installer |
-| box-optin, emma-api | v2 | Full v2 caller + companions |
-| laravel-test | v3 | Pilot app |
-| Most other Laravel apps | v1 (`build.yaml`) | Push-all-branches; merge-to-prod deploys |
+**`restart-app.yml`** — all versions. Manual dispatch. Forces Vault secret resync + pod restart. Not part of deploy.
 
----
+**sync-main**
 
-## Recommendation Summary
+- v1: not used
+- v2: separate workflow; runs on `prod` push
+- v3: built into reusable; runs after successful prod tag release
 
-**v3 is ready** for the intended model:
+**Standalone `lint.yml` / `tests.yml`**
 
-- Protected `prod` → PR required for normal developers
-- Tag on `prod` HEAD → intentional production release
-- No deploy on merge to `prod` alone
-
-**v3 advantages for the org:**
-
-1. Single place to update deploy logic (`build-deploy-app-v3.yml`)
-2. Thin, copy-paste-friendly app workflows
-3. Fixes duplicate prod release bug in v2
-4. Tighter validation and clearer failure modes
-
-**Suggested next steps:**
-
-1. Pilot on `laravel-test` (push workflow files, verify test deploy)
-2. Update `install-workflows.sh` to install `build-v3.yaml` instead of `build-v2.yaml`
-3. Migrate v2 apps (box-optin, emma-api) and remove legacy `build.yaml` where present
-4. Optionally improve validate-step error messages
+- v2: optional, installed separately
+- v3: not needed in app repos — logic lives inside v3 reusable
 
 ---
 
-## Quick Reference Card
+## Why v3 Is Superior
 
-| I want to… | Action | v2 | v3 |
-|---|---|---|---|
-| Deploy to TEST | Merge/push to `test` | Auto | Auto |
-| Deploy to PROD | Tag `vX.Y.Z` on `prod` HEAD | Manual tag push | Manual tag push |
-| Update prod code | PR into `prod` | No deploy | No deploy |
-| Resync Vault secrets | Run **Restart App** workflow | Manual | Manual |
-| Run Pint/lint | Enable `lint.yml` | Optional | Optional |
+1. **Correct prod governance** — inherits v2's tag gate; fixes v1's merge-to-prod problem
+2. **Single source of truth** — one reusable file to update for all apps
+3. **Thin app callers** — ~18 lines; no per-app orchestration drift
+4. **Fixes v2 bugs** — duplicate GitHub Release; loose manual dispatch
+5. **Explicit validation** — rejects unsupported triggers with clear errors
+6. **Quality gates without auto-commit** — blocks bad deploys; doesn't rewrite repos from CI
+7. **Better sync-main timing** — after release, not on every prod merge before tag
+8. **Modern build hygiene** — lockfile required, current Actions, PHP 8.5 default
+9. **Simple onboarding** — `start-project.sh` installs the v3 bundle
+
+---
+
+## Where v3 Is Not Superior
+
+These are trade-offs, not bugs:
+
+**Slower deploys** — lint and tests run before every test push and prod tag. v1/v2 go straight to build.
+
+**No MS Teams notifications** — v1 posted to Teams on deploy. v2/v3 do not. Add back as an optional job if ops wants it.
+
+**Stricter lint** — v1 auto-fixed from CI. v3 fails and expects local/pre-commit fixes.
+
+**No lint on feature branches** — v1 ran Pint on every push; v2 could with optional `lint.yml`. v3 lint only runs on deploy triggers (test push, prod tag).
+
+**Tests can block shipping** — when a project is CI-ready, failing tests stop deploy. v1/v2 never ran tests in the deploy path.
+
+**Migration effort** — most apps still on v1; requires workflow swap and removing old `build.yaml`.
+
+**Lockfile required** — v1 tolerated missing `package-lock.json`. v2/v3 fail without it.
+
+**sync-main timing change** — v2 synced on prod push; v3 syncs after tag release. v3 timing matches what's actually in production.
+
+**Pilot maturity** — v3 validated on laravel-test; not yet fleet-wide on `stable`.
+
+---
+
+## Common Tasks
+
+**Deploy to TEST** — push or merge to `test` (all versions).
+
+**Deploy to PROD**
+
+- v1: push or merge to `prod`
+- v2 / v3: tag `vX.Y.Z` on current `prod` HEAD
+
+**Update prod code without deploying**
+
+- v1: not really possible — merge deploys
+- v2 / v3: merge PR into `prod`; deploy only when tagged
+
+**Resync Vault secrets** — run **Restart App** workflow manually (all versions).
+
+**Sync `main` to match prod**
+
+- v1: manual
+- v2: automatic on `prod` push
+- v3: automatic after prod tag release succeeds
+
+**Run lint in CI**
+
+- v1: automatic on every push (auto-commit)
+- v2: optional separate `lint.yml`
+- v3: gate before every deploy (check-only)
+
+**Run tests in CI**
+
+- v1 / v2: not in deploy path
+- v3: gate before deploy when project is CI-ready
+
+---
+
+## Adoption Today
+
+- **Most OIT Laravel apps** — v1 (`build.yaml`, merge-to-prod)
+- **box-optin, emma-api** — v2 (some still have legacy `build.yaml` — remove to avoid double-runs)
+- **laravel-test** — v3 pilot (`@test` ref on reusable)
+- **public-deploy-scripts** — v3 templates; `start-project.sh` installs bundle from `test` branch
+- **build-laravel-app-image** — all three reusables coexist; v3 on `test` during pilot
+
+---
+
+## Migration Checklist (v1 or v2 → v3)
+
+1. Remove legacy `build.yaml` if present
+2. Install `build-v3.yaml` + `restart-app.yml`
+3. Commit `package-lock.json` if missing
+4. Confirm branch protection on `prod`
+5. Verify test deploy on push to `test`
+6. Verify prod deploy on tag + GitHub Release + sync-main
 
 ---
 
 ## File Locations
 
-| File | Repository |
-|---|---|
-| `build-v2.yaml` | `OIT-Development-Team/public-deploy-scripts` |
-| `build-v3.yaml` | `OIT-Development-Team/public-deploy-scripts` |
-| `restart-app.yml` | `OIT-Development-Team/public-deploy-scripts` |
-| `sync-main.yml` | `OIT-Development-Team/public-deploy-scripts` |
-| `install-workflows.sh` | `OIT-Development-Team/public-deploy-scripts` |
-| `build-deploy-app-v2.yml` | `ua-app-images/build-laravel-app-image` |
-| `build-deploy-app-v3.yml` | `ua-app-images/build-laravel-app-image` |
-| `release.yml` | `ua-app-images/build-laravel-app-image` |
+**public-deploy-scripts**
+
+- `build.yaml` — v1 template (legacy on stable)
+- `build-v2.yaml` — v2 template
+- `build-v3.yaml` — v3 template
+- `restart-app.yml` — all versions
+- `start-project.sh` — installs v3 bundle for new projects
+
+**ua-app-images/build-laravel-app-image**
+
+- `build-deploy-app.yml` — v1 reusable
+- `build-deploy-app-v2.yml` — v2 reusable
+- `build-deploy-app-v3.yml` — v3 reusable
+- `lint.yml`, `tests.yml`, `release.yml` — shared sub-workflows called by v3

@@ -83,7 +83,7 @@ fetch_dockerfile_or_fallback() {
     if curl -sSL -f -X POST -d @deploy-plan.json \
          -H "Content-Type: application/json" -H "AUTH: $AUTH" \
          -o "$tmp" \
-         https://build-dockerfile-api.oitapps.ua.edu/api/docker/build-dev; then
+         https://build-dockerfile-api.oitapps-test.ua.edu/api/docker/build-dev; then
         mv "$tmp" Dockerfile.dev
         echo "✅ Updated Dockerfile.dev"
     else
@@ -173,21 +173,21 @@ EXISTING_APP=false
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/docker-compose.yaml
 fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/docker-compose.yaml" \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml" \
     "docker-compose.yaml" \
     "docker-compose.yaml"
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/deploy-plan.json
 fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/deploy-plan.json" \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json" \
     "deploy-plan.json" \
     "deploy-plan.json"
 
-# GitHub Actions workflows (v3 bundle) — fetched only when missing.
+# GitHub Actions workflows — fetched only when missing.
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/
-WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable"
+WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test"
 for wf in build-v3.yaml restart-app.yml; do
     fetch_if_missing_or_fallback \
         "$WORKFLOW_BASE/$wf" \
@@ -198,7 +198,7 @@ done
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit
 fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit" \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit" \
     ".git/hooks/pre-commit" \
     ".git/hooks/pre-commit"
 [ -f .git/hooks/pre-commit ] && chmod +x .git/hooks/pre-commit
@@ -212,7 +212,7 @@ if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
     # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh
     # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/add-pv.sh
     if curl -sSL -f -o "$ADD_PV_TMP" \
-        "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/add-pv.sh"; then
+        "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh"; then
         mv "$ADD_PV_TMP" add-pv.sh
         chmod +x add-pv.sh
         ./add-pv.sh
@@ -257,7 +257,7 @@ LARAVEL_APP_TMP="laravel-app.sh.tmp.$$"
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-app.sh
 if curl -sSL -f -o "$LARAVEL_APP_TMP" \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-app.sh"; then
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh"; then
     mv "$LARAVEL_APP_TMP" laravel-app.sh
     chmod +x laravel-app.sh
     # shellcheck disable=SC2086

@@ -15,7 +15,7 @@ on:
 
 jobs:
   restart-app:
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/restart-app.yml@main
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/restart-app.yml@test
     secrets: inherit
     with:
       repository: ${{ github.event.repository.name }}
