@@ -9,7 +9,7 @@
 # Remote resources are fetched when possible so updates are picked up. If a fetch
 # fails (e.g. offline), the script falls back to an existing local copy where appropriate.
 # deploy-plan.json and docker-compose.yaml are never overwritten once present (project-specific).
-# GitHub workflow and pre-commit hook are fetched only when missing.
+# GitHub workflows (build-v3.yaml, restart-app.yml) and pre-commit hook are fetched only when missing.
 # add-pv.sh and laravel-app.sh are downloaded when needed and removed after use.
 #
 # USAGE:
@@ -184,12 +184,16 @@ fetch_if_missing_or_fallback \
     "deploy-plan.json" \
     "deploy-plan.json"
 
-# TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/build.yaml
-# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml
-fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml" \
-    ".github/workflows/build.yaml" \
-    ".github/workflows/build.yaml"
+# GitHub Actions workflows (v3 bundle) — fetched only when missing.
+# TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/
+# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/
+WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable"
+for wf in build-v3.yaml restart-app.yml; do
+    fetch_if_missing_or_fallback \
+        "$WORKFLOW_BASE/$wf" \
+        ".github/workflows/$wf" \
+        ".github/workflows/$wf"
+done
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit

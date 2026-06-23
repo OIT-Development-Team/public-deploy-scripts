@@ -22,10 +22,13 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-#Pull down github action file
-if [ ! -f .github/workflows/build.yaml ]; then
-       curl https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml --create-dirs -o .github/workflows/build.yaml
-fi
+# GitHub Actions workflows (v3 bundle) — fetched only when missing.
+WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable"
+for wf in build-v3.yaml restart-app.yml; do
+    if [ ! -f ".github/workflows/$wf" ]; then
+        curl -fsSL "$WORKFLOW_BASE/$wf" --create-dirs -o ".github/workflows/$wf"
+    fi
+done
 
 #Pull down git pre-commit hook file
 if [ ! -f .git/hooks/pre-commit ]; then

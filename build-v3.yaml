@@ -1,0 +1,17 @@
+name: Build & Deploy Laravel App
+
+on:
+  push:
+    branches: [test]
+    tags: [v*]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v3.yml@main
+    with:
+      repository: ${{ github.repository }}
+    secrets: inherit

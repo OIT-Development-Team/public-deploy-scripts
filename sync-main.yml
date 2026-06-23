@@ -1,3 +1,5 @@
+# Deprecated: sync-main now runs automatically at the end of build-deploy-app-v3.yml
+# after a successful prod tag deploy. Kept for v2 apps still on build-v2.yaml.
 name: Sync Main with Prod
 
 on:
