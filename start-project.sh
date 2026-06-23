@@ -184,15 +184,23 @@ fetch_if_missing_or_fallback \
     "deploy-plan.json" \
     "deploy-plan.json"
 
-# GitHub Actions workflows — fetched only when missing.
+# GitHub Actions workflows — v3 bundle; remove legacy callers, then fetch if missing.
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/
+WORKFLOW_DIR=".github/workflows"
+mkdir -p "$WORKFLOW_DIR"
+for legacy in build.yaml build-v2.yaml sync-main.yml lint.yml tests.yml; do
+    if [ -f "$WORKFLOW_DIR/$legacy" ]; then
+        rm -f "$WORKFLOW_DIR/$legacy"
+        echo "🗑️  Removed legacy workflow $legacy"
+    fi
+done
 WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test"
 for wf in build-v3.yaml restart-app.yml; do
     fetch_if_missing_or_fallback \
         "$WORKFLOW_BASE/$wf" \
-        ".github/workflows/$wf" \
-        ".github/workflows/$wf"
+        "$WORKFLOW_DIR/$wf" \
+        "$WORKFLOW_DIR/$wf"
 done
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
