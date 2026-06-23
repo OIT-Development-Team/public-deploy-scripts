@@ -23,7 +23,7 @@ How each generation works, what lives where, and why v3 is the target — includ
 - **Test deploy:** push to `test`
 - **App workflow:** ~61 lines, 4 jobs (validate, build-test, build-prod, release)
 - **Triggers on:** push to `test`, semver tags, manual dispatch
-- **Pint:** removed from deploy; optional separate `lint.yml` (rarely installed)
+- **Pint:** removed from deploy; optional standalone workflow (legacy `lint.yml`) — rarely installed
 - **Tests:** none in deploy path
 - **Prod release:** yes — but **created twice** on tag push (known bug)
 - **sync-main:** separate workflow on every `prod` push
@@ -35,12 +35,12 @@ How each generation works, what lives where, and why v3 is the target — includ
 - **Test deploy:** push to `test`
 - **App workflow:** ~18 lines, 1 job — passes `repository` only
 - **Triggers on:** push to `test`, semver tags, manual dispatch
-- **Pint / lint:** check-only gate before build (never auto-commits)
+- **Pint / frontend checks:** Pint check-only gate before build (never auto-commits); optional npm format/lint if defined
 - **Tests:** conditional gate before build (skips when project isn't CI-ready)
 - **Prod release:** once, via shared `release.yml`
 - **sync-main:** built into reusable workflow; runs after successful prod tag release
 - **Image tags:** same as v2
-- **Onboarding:** `start-project.sh` installs `build-v3.yaml` + `restart-app.yml`
+- **Onboarding:** `start-project.sh` installs `build-v3.yaml` + `refresh-vault-secrets.yaml`
 
 **Headline:** v2 and v3 share the same deployment *intent*. v1 is the outlier — merge to prod deploys. v3 combines v2's governance with v1's caller simplicity and adds quality gates.
 
@@ -53,10 +53,10 @@ public-deploy-scripts          app repo                    build-laravel-app-ima
 (template)                     (caller)                    (reusable)
 
 build-v3.yaml  ──copy──►  .github/workflows/build-v3.yaml
-restart-app.yml           .github/workflows/restart-app.yml
+refresh-vault-secrets.yaml   .github/workflows/refresh-vault-secrets.yaml
                                │
                                └── uses ──► build-deploy-app-v3.yml
-                                            ├── lint.yml
+                                            ├── pint.yml
                                             ├── tests.yml
                                             ├── release.yml
                                             └── (sync-main inline)
@@ -66,7 +66,7 @@ restart-app.yml           .github/workflows/restart-app.yml
 
 - **Template** (`public-deploy-scripts`) — canonical YAML copied into app repos
 - **App caller** (`{app}/.github/workflows/`) — defines *when* deploy runs
-- **Reusable** (`ua-app-images/build-laravel-app-image`) — shared validate, lint, tests, build, GitOps, release
+- **Reusable** (`ua-app-images/build-laravel-app-image`) — shared validate, pint, tests, build, GitOps, release
 
 ---
 
@@ -103,7 +103,7 @@ Someone must intentionally tag current `prod` HEAD to ship. Invalid tags or tags
 
 - v1: deploy to TEST
 - v2: deploy to TEST
-- v3: deploy to TEST (after lint + tests pass)
+- v3: deploy to TEST (after Pint + tests pass)
 
 **Push/merge to `prod`**
 
@@ -121,7 +121,7 @@ Someone must intentionally tag current `prod` HEAD to ship. Invalid tags or tags
 
 - v1: runs if caller receives tag ref (unusual in v1 setups)
 - v2: validate → build prod → GitHub Release (×2)
-- v3: validate → lint → tests → build → GitOps → Release → sync-main
+- v3: validate → pint → tests → build → GitOps → Release → sync-main
 
 **Manual workflow dispatch**
 
@@ -161,8 +161,8 @@ Requires caller to pass `branch: test` or `branch: prod`. No lint or tests in de
 
 ```
 validate          → resolve test vs prod; reject bad triggers
-lint       ──┐
-tests      ──┴→ parallel quality gates (tests skip when not CI-ready)
+pint       ──┐
+tests      ──┴→ parallel quality gates (Pint check + optional npm; tests skip when not CI-ready)
 build-app         → Docker build/push
 update-gitops     → commit manifests
 release           → prod tags only, once
@@ -190,7 +190,7 @@ All versions, once past gates:
 
 - **v1:** PHP 8.4 default; lockfile optional; image tag `{branch}-{run#}`; older Actions
 - **v2:** lockfile required (`npm ci`); image tag `{ref}`; no Teams webhook
-- **v3:** PHP 8.5 default; lockfile required; image tag `{ref}`; lint/tests before build
+- **v3:** PHP 8.5 default; lockfile required; image tag `{ref}`; Pint/tests before build
 
 ---
 
@@ -204,9 +204,9 @@ Runs on all branch pushes. Can commit `"style: Apply Laravel Pint fixes"` back t
 
 Optional standalone `lint.yml` on all branches — rarely installed. Pre-commit hook is the main defense.
 
-### v3 — lint + tests block deploy
+### v3 — Pint + tests block deploy
 
-**Lint** (always on deploy triggers): `composer lint`, `npm run format`, `npm run lint`. Check-only — never commits.
+**Pint** (always on deploy triggers): `./vendor/bin/pint --test`, or `composer lint:check` when defined. Optional npm `format` / `lint` scripts if the app defines them. Check-only — never commits.
 
 **Tests** (skip cleanly when not ready):
 
@@ -223,7 +223,7 @@ Pre-commit hook (from `start-project.sh`) is still the first line of defense.
 
 ## Companion Workflows
 
-**`restart-app.yml`** — all versions. Manual dispatch. Forces Vault secret resync + pod restart. Not part of deploy.
+**`refresh-vault-secrets.yaml`** — all versions. Manual dispatch. Forces Vault secret resync + pod restart. Not part of deploy. Reusable: `refresh-vault-secrets.yml`.
 
 **sync-main**
 
@@ -231,10 +231,7 @@ Pre-commit hook (from `start-project.sh`) is still the first line of defense.
 - v2: separate workflow; runs on `prod` push
 - v3: built into reusable; runs after successful prod tag release
 
-**Standalone `lint.yml` / `tests.yml`**
-
-- v2: optional, installed separately
-- v3: not needed in app repos — logic lives inside v3 reusable
+- **`pint.yml`** (standalone, legacy filename `lint.yml`) — optional, all-branch push. v3 uses reusable `pint.yml` in deploy path instead.
 
 ---
 
@@ -256,13 +253,13 @@ Pre-commit hook (from `start-project.sh`) is still the first line of defense.
 
 These are trade-offs, not bugs:
 
-**Slower deploys** — lint and tests run before every test push and prod tag. v1/v2 go straight to build.
+**Slower deploys** — Pint and tests run before every test push and prod tag. v1/v2 go straight to build.
 
 **No MS Teams notifications** — v1 posted to Teams on deploy. v2/v3 do not. Add back as an optional job if ops wants it.
 
-**Stricter lint** — v1 auto-fixed from CI. v3 fails and expects local/pre-commit fixes.
+**Stricter Pint** — v1 auto-fixed from CI. v3 fails and expects local/pre-commit fixes.
 
-**No lint on feature branches** — v1 ran Pint on every push; v2 could with optional `lint.yml`. v3 lint only runs on deploy triggers (test push, prod tag).
+**No Pint on feature branches** — v1 ran Pint on every push; v2 could with optional standalone workflow (legacy `lint.yml`). v3 Pint only runs on deploy triggers (test push, prod tag).
 
 **Tests can block shipping** — when a project is CI-ready, failing tests stop deploy. v1/v2 never ran tests in the deploy path.
 
@@ -290,7 +287,7 @@ These are trade-offs, not bugs:
 - v1: not really possible — merge deploys
 - v2 / v3: merge PR into `prod`; deploy only when tagged
 
-**Resync Vault secrets** — run **Restart App** workflow manually (all versions).
+**Resync Vault secrets** — run **Refresh Vault Secrets & Restart** workflow manually (all versions).
 
 **Sync `main` to match prod**
 
@@ -298,11 +295,11 @@ These are trade-offs, not bugs:
 - v2: automatic on `prod` push
 - v3: automatic after prod tag release succeeds
 
-**Run lint in CI**
+**Run Pint in CI**
 
 - v1: automatic on every push (auto-commit)
-- v2: optional separate `lint.yml`
-- v3: gate before every deploy (check-only)
+- v2: optional standalone workflow (legacy filename `lint.yml`)
+- v3: `pint` job before every deploy — `./vendor/bin/pint --test` (check-only)
 
 **Run tests in CI**
 
@@ -324,7 +321,7 @@ These are trade-offs, not bugs:
 ## Migration Checklist (v1 or v2 → v3)
 
 1. Remove legacy `build.yaml` if present
-2. Install `build-v3.yaml` + `restart-app.yml`
+2. Install `build-v3.yaml` + `refresh-vault-secrets.yaml`
 3. Commit `package-lock.json` if missing
 4. Confirm branch protection on `prod`
 5. Verify test deploy on push to `test`
@@ -339,7 +336,8 @@ These are trade-offs, not bugs:
 - `build.yaml` — v1 template (legacy on stable)
 - `build-v2.yaml` — v2 template
 - `build-v3.yaml` — v3 template
-- `restart-app.yml` — all versions
+- `refresh-vault-secrets.yaml` — app caller (all versions)
+- `laravel-hooks/pre-commit` — Pint hook template
 - `start-project.sh` — installs v3 bundle for new projects
 
 **ua-app-images/build-laravel-app-image**
@@ -347,4 +345,4 @@ These are trade-offs, not bugs:
 - `build-deploy-app.yml` — v1 reusable
 - `build-deploy-app-v2.yml` — v2 reusable
 - `build-deploy-app-v3.yml` — v3 reusable
-- `lint.yml`, `tests.yml`, `release.yml` — shared sub-workflows called by v3
+- `pint.yml`, `tests.yml`, `release.yml`, `refresh-vault-secrets.yml` — shared sub-workflows called by v3

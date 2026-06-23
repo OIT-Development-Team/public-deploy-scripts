@@ -9,7 +9,7 @@
 # Remote resources are fetched when possible so updates are picked up. If a fetch
 # fails (e.g. offline), the script falls back to an existing local copy where appropriate.
 # deploy-plan.json and docker-compose.yaml are never overwritten once present (project-specific).
-# GitHub workflows (build-v3.yaml, restart-app.yml) and pre-commit hook are fetched only when missing.
+# GitHub workflows (build-v3.yaml, refresh-vault-secrets.yaml) and pre-commit hook are fetched only when missing.
 # add-pv.sh and laravel-app.sh are downloaded when needed and removed after use.
 #
 # USAGE:
@@ -189,14 +189,14 @@ fetch_if_missing_or_fallback \
 # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/
 WORKFLOW_DIR=".github/workflows"
 mkdir -p "$WORKFLOW_DIR"
-for legacy in build.yaml build-v2.yaml sync-main.yml lint.yml tests.yml; do
+for legacy in build.yaml build-v2.yaml sync-main.yml lint.yml tests.yml restart-app.yml; do
     if [ -f "$WORKFLOW_DIR/$legacy" ]; then
         rm -f "$WORKFLOW_DIR/$legacy"
         echo "🗑️  Removed legacy workflow $legacy"
     fi
 done
 WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test"
-for wf in build-v3.yaml restart-app.yml; do
+for wf in build-v3.yaml refresh-vault-secrets.yaml; do
     fetch_if_missing_or_fallback \
         "$WORKFLOW_BASE/$wf" \
         "$WORKFLOW_DIR/$wf" \
