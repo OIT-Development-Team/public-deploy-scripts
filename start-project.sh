@@ -79,7 +79,7 @@ fetch_if_missing_or_fallback() {
 fetch_dockerfile_or_fallback() {
     tmp="Dockerfile.dev.tmp.$$"
     # TEST: https://build-dockerfile-api.oitapps-test.ua.edu/api/docker/build-dev
-    # STABLE: https://build-dockerfile-api.oitapps.ua.edu/api/docker/build-dev
+    # PROD: https://build-dockerfile-api.oitapps.ua.edu/api/docker/build-dev
     if curl -sSL -f -X POST -d @deploy-plan.json \
          -H "Content-Type: application/json" -H "AUTH: $AUTH" \
          -o "$tmp" \
@@ -171,14 +171,14 @@ EXISTING_APP=false
 # deploy-plan.json and docker-compose.yaml are only fetched when missing.
 # --------------------------------------
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml
-# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/docker-compose.yaml
+# PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/docker-compose.yaml
 fetch_if_missing_or_fallback \
     "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml" \
     "docker-compose.yaml" \
     "docker-compose.yaml"
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json
-# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/deploy-plan.json
+# PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/deploy-plan.json
 fetch_if_missing_or_fallback \
     "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json" \
     "deploy-plan.json" \
@@ -186,7 +186,7 @@ fetch_if_missing_or_fallback \
 
 # GitHub Actions workflows — v3 bundle; remove legacy callers, then fetch if missing.
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/
-# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/
+# PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/
 WORKFLOW_DIR=".github/workflows"
 mkdir -p "$WORKFLOW_DIR"
 for legacy in build.yaml build-v2.yaml sync-main.yml lint.yml tests.yml restart-app.yml; do
@@ -204,7 +204,7 @@ for wf in build-v3.yaml refresh-vault-secrets.yaml; do
 done
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
-# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-hooks/pre-commit
+# PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-hooks/pre-commit
 fetch_if_missing_or_fallback \
     "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit" \
     ".git/hooks/pre-commit" \
@@ -218,7 +218,7 @@ if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
     rm -f add-pv.sh
     ADD_PV_TMP="add-pv.sh.tmp.$$"
     # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh
-    # STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/add-pv.sh
+    # PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/add-pv.sh
     if curl -sSL -f -o "$ADD_PV_TMP" \
         "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh"; then
         mv "$ADD_PV_TMP" add-pv.sh
@@ -263,7 +263,7 @@ fi
 # --------------------------------------
 LARAVEL_APP_TMP="laravel-app.sh.tmp.$$"
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
-# STABLE: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/laravel-app.sh
+# PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-app.sh
 if curl -sSL -f -o "$LARAVEL_APP_TMP" \
     "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh"; then
     mv "$LARAVEL_APP_TMP" laravel-app.sh
