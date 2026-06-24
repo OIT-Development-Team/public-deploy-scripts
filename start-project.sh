@@ -173,14 +173,14 @@ EXISTING_APP=false
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml
 # PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/docker-compose.yaml
 fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/docker-compose.yaml" \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/docker-compose.yaml" \
     "docker-compose.yaml" \
     "docker-compose.yaml"
 
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json
 # PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/deploy-plan.json
 fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/deploy-plan.json" \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/deploy-plan.json" \
     "deploy-plan.json" \
     "deploy-plan.json"
 
@@ -195,7 +195,7 @@ for legacy in build.yaml build-v2.yaml sync-main.yml lint.yml tests.yml restart-
         echo "🗑️  Removed legacy workflow $legacy"
     fi
 done
-WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test"
+WORKFLOW_BASE="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main"
 for wf in build-v3.yaml refresh-vault-secrets.yaml; do
     fetch_if_missing_or_fallback \
         "$WORKFLOW_BASE/$wf" \
@@ -206,7 +206,7 @@ done
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
 # PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-hooks/pre-commit
 fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit" \
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-hooks/pre-commit" \
     ".git/hooks/pre-commit" \
     ".git/hooks/pre-commit"
 [ -f .git/hooks/pre-commit ] && chmod +x .git/hooks/pre-commit
@@ -220,7 +220,7 @@ if echo "$FORWARD_ARGS" | grep -qw -- --pv; then
     # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh
     # PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/add-pv.sh
     if curl -sSL -f -o "$ADD_PV_TMP" \
-        "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/add-pv.sh"; then
+        "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/add-pv.sh"; then
         mv "$ADD_PV_TMP" add-pv.sh
         chmod +x add-pv.sh
         ./add-pv.sh
