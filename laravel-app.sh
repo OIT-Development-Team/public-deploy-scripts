@@ -328,18 +328,19 @@ function_configure_vite() {
 
         if grep -q 'server:' "$FILE_VITE"; then
             awk '
-            BEGIN { in_server=0; host_found=0; hmr_found=0; }
+            BEGIN { in_server=0; depth=0; host_found=0; hmr_found=0; }
             /server\s*:/ && /\{/ {
                 print;
                 in_server=1;
+                depth=1;
                 next
             }
-            in_server && /host\s*:/ {
+            in_server && depth==1 && /host\s*:/ {
                 print "        host: '\''0.0.0.0'\'',";
                 host_found=1;
                 next
             }
-            in_server && /hmr\s*:/ {
+            in_server && depth==1 && /hmr\s*:/ {
                 print "        hmr: {";
                 print "            host: '\''localhost'\''";
                 print "        },";
@@ -350,16 +351,22 @@ function_configure_vite() {
                 }
                 next
             }
-            in_server && /\}/ {
-                if (!host_found) print "        host: '\''0.0.0.0'\'',"
-                if (!hmr_found) {
-                    print "        hmr: {"
-                    print "            host: '\''localhost'\''"
-                    print "        },"
+            in_server {
+                # count braces to track depth of nested blocks
+                tmp=$0; gsub(/[^{]/, "", tmp); opens=length(tmp);
+                tmp=$0; gsub(/[^}]/, "", tmp); closes=length(tmp);
+                depth += opens - closes;
+                if (depth == 0) {
+                    if (!host_found) print "        host: '\''0.0.0.0'\'',"
+                    if (!hmr_found) {
+                        print "        hmr: {"
+                        print "            host: '\''localhost'\''"
+                        print "        },"
+                    }
+                    print;
+                    in_server=0;
+                    next
                 }
-                print
-                in_server=0
-                next
             }
             { print }
             ' "$FILE_VITE" > "$FILE_VITE.tmp" && mv "$FILE_VITE.tmp" "$FILE_VITE"
