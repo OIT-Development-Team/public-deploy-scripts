@@ -265,7 +265,7 @@ LARAVEL_APP_TMP="laravel-app.sh.tmp.$$"
 # TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh
 # PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-app.sh
 if curl -sSL -f -o "$LARAVEL_APP_TMP" \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-app.sh"; then
+    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-app.sh"; then
     mv "$LARAVEL_APP_TMP" laravel-app.sh
     chmod +x laravel-app.sh
     # shellcheck disable=SC2086

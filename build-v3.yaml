@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   deploy:
-    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v3.yml@test
+    uses: ua-app-images/build-laravel-app-image/.github/workflows/build-deploy-app-v3.yml@main
     with:
       repository: ${{ github.repository }}
     secrets: inherit
