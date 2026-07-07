@@ -2,14 +2,11 @@
 set -euo pipefail
 
 WORKFLOW_DIR=".github/workflows"
-BASE_URL="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/heads/master"
+BASE_URL="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/refs/heads/main"
 
 FILES=(
-  build-v2.yaml
-  #lint.yml
-  restart-app.yml
-  #tests.yml
-  sync-main.yml
+  build-v3.yaml
+  refresh-vault-secrets.yaml
 )
 
 echo "Installing shared GitHub workflows..."
