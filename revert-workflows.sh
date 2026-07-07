@@ -3,7 +3,7 @@ set -euo pipefail
 
 WORKFLOW_DIR=".github/workflows"
 LEGACY_FILE="build.yaml"
-LEGACY_URL="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/stable/build.yaml"
+LEGACY_URL="https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/master/build.yaml"
 
 echo "Restoring legacy GitHub workflows..."
 
