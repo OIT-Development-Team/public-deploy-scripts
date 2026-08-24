@@ -9,7 +9,7 @@
 # Remote resources are fetched when possible so updates are picked up. If a fetch
 # fails (e.g. offline), the script falls back to an existing local copy where appropriate.
 # deploy-plan.json and docker-compose.yaml are never overwritten once present (project-specific).
-# GitHub workflows (build-v3.yaml, refresh-vault-secrets.yaml) and pre-commit hook are fetched only when missing.
+# GitHub workflows (build-v3.yaml, refresh-vault-secrets.yaml) are fetched only when missing.
 # add-pv.sh and laravel-app.sh are downloaded when needed and removed after use.
 #
 # USAGE:
@@ -202,14 +202,6 @@ for wf in build-v3.yaml refresh-vault-secrets.yaml; do
         "$WORKFLOW_DIR/$wf" \
         "$WORKFLOW_DIR/$wf"
 done
-
-# TEST: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/test/laravel-hooks/pre-commit
-# PROD: https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-hooks/pre-commit
-fetch_if_missing_or_fallback \
-    "https://raw.githubusercontent.com/OIT-Development-Team/public-deploy-scripts/main/laravel-hooks/pre-commit" \
-    ".git/hooks/pre-commit" \
-    ".git/hooks/pre-commit"
-[ -f .git/hooks/pre-commit ] && chmod +x .git/hooks/pre-commit
 
 # --------------------------------------
 # Persistent volumes (--pv): download, run on host, then remove (never kept locally)
