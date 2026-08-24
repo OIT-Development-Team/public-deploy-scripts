@@ -73,7 +73,7 @@ refresh-vault-secrets.yaml     refresh-vault-secrets.yaml ──uses──► re
 
 **Pilot refs:** v3 templates and `laravel-test` call reusables at `@test` (e.g. `build-deploy-app-v3.yml@test`). After fleet promotion, switch callers to `@main`.
 
-**`start-project.sh` (v3 onboarding):** on each run, removes legacy app workflows (`build.yaml`, `build-v2.yaml`, `sync-main.yml`, `lint.yml`, `tests.yml`, `restart-app.yml`), then fetches `build-v3.yaml` and `refresh-vault-secrets.yaml` if missing. Installs `laravel-hooks/pre-commit` → `.git/hooks/pre-commit` if missing (does not overwrite an existing hook).
+**`start-project.sh` (v3 onboarding):** on each run, removes legacy app workflows (`build.yaml`, `build-v2.yaml`, `sync-main.yml`, `lint.yml`, `tests.yml`, `restart-app.yml`), then fetches `build-v3.yaml` and `refresh-vault-secrets.yaml` if missing. No longer installs the `laravel-hooks/pre-commit` hook (existing local hooks are left untouched).
 
 ---
 
@@ -365,7 +365,7 @@ These are trade-offs, not bugs:
 
 - `.github/workflows/build-v3.yaml` — deploy caller
 - `.github/workflows/refresh-vault-secrets.yaml` — manual vault refresh caller
-- `.git/hooks/pre-commit` — installed from template (local only, not committed)
+- `.git/hooks/pre-commit` — legacy; no longer installed by `start-project.sh` (may remain in clones that got it from the old template)
 
 **ua-app-images/build-laravel-app-image**
 
